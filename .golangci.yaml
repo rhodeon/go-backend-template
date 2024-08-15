@@ -1,0 +1,47 @@
+run:
+  timeout: 5m
+  issues-exit-code: 10
+
+output:
+  show-stats: true
+
+linters:
+  enable:
+    - wrapcheck
+    - nilerr
+    - nilnil
+    - nonamedreturns
+    - gocritic
+    - depguard
+    - errorlint
+
+linters-settings:
+  depguard:
+    rules:
+      use_pkg_errors:
+        files:
+          - $all
+        deny:
+          - pkg: errors
+            desc: "use github.com/pkg/errors instead of the standard errors package in order to have a stacktrace"
+
+  sloglint:
+    # Enforce using key-value pairs only (overrides no-mixed-args, incompatible with attr-only).
+    # https://github.com/go-simpler/sloglint?tab=readme-ov-file#key-value-pairs-only
+    # Default: false
+    kv-only: true
+    # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
+    # https://github.com/go-simpler/sloglint?tab=readme-ov-file#attributes-only
+    # Default: false
+    attr-only: true
+
+    # Enforce using static values for log messages.
+    # https://github.com/go-simpler/sloglint?tab=readme-ov-file#static-messages
+    # Default: false
+    static-msg: true
+
+    # Enforce a single key naming convention.
+    # Values: snake, kebab, camel, pascal
+    # https://github.com/go-simpler/sloglint?tab=readme-ov-file#key-naming-convention
+    # Default: ""
+    key-naming-case: snake
