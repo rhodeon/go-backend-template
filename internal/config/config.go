@@ -1,4 +1,4 @@
-package internal
+package config
 
 import (
 	"github.com/caarlos0/env/v11"
@@ -14,9 +14,9 @@ type Config struct {
 	Database    DatabaseConfig
 }
 
-func ParseConfig() *Config {
+func Parse(prefix string) *Config {
 	cfg := env.Must(env.ParseAsWithOptions[Config](env.Options{
-		Prefix: "API_",
+		Prefix: prefix + "_",
 	}))
 	return &cfg
 }

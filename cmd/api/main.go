@@ -3,14 +3,19 @@ package main
 import (
 	"context"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
+	"github.com/rhodeon/go-backend-template/internal/config"
+	"github.com/rhodeon/go-backend-template/internal/database"
+	"github.com/rhodeon/go-backend-template/internal/log"
 )
 
+const ConfigPrefix = "API"
+
 func main() {
-	cfg := internal.ParseConfig()
-	logger := internal.SetupLogger(cfg)
+	cfg := config.Parse(ConfigPrefix)
+	logger := log.NewLogger(cfg)
 	app := internal.NewApplication(cfg, logger)
 
-	dbPool, err := internal.ConnectToDb(cfg, logger)
+	dbPool, err := database.Connect(cfg, logger)
 	if err != nil {
 		panic(err)
 	}
