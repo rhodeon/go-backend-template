@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 )
 
@@ -9,5 +10,15 @@ func main() {
 	logger := internal.SetupLogger(cfg)
 	app := internal.NewApplication(cfg, logger)
 
-	app.Logger.Info("Testing 123...")
+	dbPool, err := internal.ConnectToDb(cfg, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	res, err := dbPool.Exec(context.Background(), "SELECT 1")
+	if err != nil {
+		panic(err)
+	}
+
+	app.Logger.Info(res.String())
 }
