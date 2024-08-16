@@ -1,4 +1,4 @@
-package config
+package internal
 
 import (
 	"github.com/caarlos0/env/v11"
@@ -6,17 +6,17 @@ import (
 	"time"
 )
 
+const configPrefix = "MIGRATION_"
+
 type Config struct {
 	Environment string `env:"ENVIRONMENT" envDefault:"Development"`
 	DebugMode   bool   `env:"DEBUG_MODE" envDefault:"false"`
-	HttpPort    int    `env:"HTTP_PORT,required"`
-	BaseUrl     string `env:"BASE_URL"`
 	Database    DatabaseConfig
 }
 
-func Parse(prefix string) *Config {
+func ParseConfig() *Config {
 	cfg := env.Must(env.ParseAsWithOptions[Config](env.Options{
-		Prefix: prefix + "_",
+		Prefix: configPrefix,
 	}))
 	return &cfg
 }

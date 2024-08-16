@@ -1,12 +1,11 @@
 package log
 
 import (
-	"github.com/rhodeon/go-backend-template/internal/config"
 	"log/slog"
 )
 
-func NewLogger(cfg *config.Config) *slog.Logger {
-	if cfg.DebugMode {
+func NewLogger(debugMode bool) *slog.Logger {
+	if debugMode {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
