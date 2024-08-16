@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
-	"github.com/rhodeon/go-backend-template/repositories/database/implementation/users"
+	"github.com/rhodeon/go-backend-template/models"
 	"time"
 )
 
@@ -30,9 +30,9 @@ type UserResponseBody struct {
 
 func CreateUser(app *internal.Application) func(context.Context, *UserRequest) (*UserResponse, error) {
 	return func(ctx context.Context, req *UserRequest) (*UserResponse, error) {
-		createdUser, err := app.Repository.Database.Users.Create(ctx, app.DbPool, users.CreateParams{
-			Email:    req.Body.Email,
+		createdUser, err := app.Services.User.Create(ctx, app.DbPool, models.User{
 			Username: req.Body.Username,
+			Email:    req.Body.Email,
 		})
 		if err != nil {
 			return nil, err

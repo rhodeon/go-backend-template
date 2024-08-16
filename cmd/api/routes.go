@@ -4,6 +4,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"net/http"
@@ -11,6 +12,9 @@ import (
 
 func routes(app *internal.Application) http.Handler {
 	router := chi.NewMux()
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+
 	api := humachi.New(router, huma.DefaultConfig("API", "0.1.0"))
 
 	huma.Register(
