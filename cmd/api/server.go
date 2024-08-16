@@ -16,7 +16,7 @@ import (
 // serveApi starts up a server with the app data.
 func serveApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup) error {
 	serverConfig := app.Config.Server
-	router := routes()
+	router := routes(app)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", serverConfig.HttpPort),
