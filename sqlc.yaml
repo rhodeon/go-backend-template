@@ -2,7 +2,7 @@ version: "2"
 sql:
   - engine: "postgresql"
     schema: ./cmd/migrations/schema
-    queries: ./repository/database/queries/posts.sql
+    queries: ./repositories/database/queries/posts.sql
     rules:
         - sqlc/db-prepare
         - delete-without-where
@@ -11,7 +11,7 @@ sql:
         uri: 'postgresql://${API_DB_USER}:${API_DB_PASS}@${API_DB_HOST}:${API_DB_PORT}/${API_DB_NAME}'
     gen:
       go:
-        out: "./repository/database/implementation/posts"
+        out: "./repositories/database/implementation/posts"
         package: "posts"
         sql_package: "pgx/v5"
         omit_unused_structs: true
@@ -47,7 +47,7 @@ sql:
 
   - engine: "postgresql"
     schema: ./cmd/migrations/schema
-    queries: ./repository/database/queries/users.sql
+    queries: ./repositories/database/queries/users.sql
     rules:
         - sqlc/db-prepare
         - delete-without-where
@@ -56,7 +56,7 @@ sql:
         uri: 'postgresql://${API_DB_USER}:${API_DB_PASS}@${API_DB_HOST}:${API_DB_PORT}/${API_DB_NAME}'
     gen:
       go:
-        out: "./repository/database/implementation/users"
+        out: "./repositories/database/implementation/users"
         package: "users"
         sql_package: "pgx/v5"
         omit_unused_structs: true
