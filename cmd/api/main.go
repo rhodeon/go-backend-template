@@ -12,6 +12,7 @@ import (
 func main() {
 	cfg := internal.ParseConfig()
 	logger := log.NewLogger(cfg.DebugMode)
+	logger.Debug("HEYYYYYYY")
 
 	dbConfig := database.Config(cfg.Database)
 	dbPool, err := database.Connect(&dbConfig, logger, cfg.DebugMode)
