@@ -2,7 +2,11 @@ package handlers
 
 import (
 	"context"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/pkg/errors"
+	api_errors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
+	domain_errors "github.com/rhodeon/go-backend-template/errors"
 	"github.com/rhodeon/go-backend-template/models"
 	"time"
 )
@@ -35,7 +39,14 @@ func CreateUser(app *internal.Application) func(context.Context, *UserRequest) (
 			Email:    req.Body.Email,
 		})
 		if err != nil {
-			return nil, err
+			var e domain_errors.DuplicateDataError
+			switch {
+			case errors.As(err, &e):
+				return nil, huma.Error409Conflict(err.Error())
+
+			default:
+				return nil, api_errors.InternalServerError(err, app.Logger)
+			}
 		}
 
 		return &UserResponse{UserResponseBody(createdUser)}, nil

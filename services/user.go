@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"github.com/pkg/errors"
+	domain_errors "github.com/rhodeon/go-backend-template/errors"
 	"github.com/rhodeon/go-backend-template/models"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/database"
@@ -30,7 +31,11 @@ func (u User) Create(ctx context.Context, dbTx database.Transaction, user models
 	if err != nil {
 		switch {
 		case strings.Contains(err.Error(), database.UniqueUsersEmail):
+			return models.User{}, domain_errors.NewDuplicateDataError("user", "email", user.Email)
+
 		case strings.Contains(err.Error(), database.UniqueUsersUsername):
+			return models.User{}, domain_errors.NewDuplicateDataError("user", "username", user.Username)
+
 		default:
 			return models.User{}, errors.Wrap(err, "unable to create user")
 		}
