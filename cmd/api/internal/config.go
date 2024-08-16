@@ -11,9 +11,8 @@ const configPrefix = "API_"
 type Config struct {
 	Environment string `env:"ENVIRONMENT" envDefault:"Development"`
 	DebugMode   bool   `env:"DEBUG_MODE" envDefault:"false"`
-	HttpPort    int    `env:"HTTP_PORT,required"`
-	BaseUrl     string `env:"BASE_URL"`
 	Database    DatabaseConfig
+	Server      ServerConfig
 }
 
 func ParseConfig() *Config {
@@ -21,6 +20,17 @@ func ParseConfig() *Config {
 		Prefix: configPrefix,
 	}))
 	return &cfg
+}
+
+type ServerConfig struct {
+	HttpPort int    `env:"HTTP_PORT,required"`
+	BaseUrl  string `env:"BASE_URL"`
+
+	// The timeout defaults are those used by https://autostrada.dev and should be modified according to real usage if needed.
+	IdleTimeout     time.Duration `env:"IDLE_TIMEOUT" envDefault:"1m"`
+	ReadTimeout     time.Duration `env:"READ_TIMEOUT" envDefault:"5s"`
+	WriteTimeout    time.Duration `env:"WRITE_TIMEOUT" envDefault:"10s"`
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 }
 
 type DatabaseConfig struct {
