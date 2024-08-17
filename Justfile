@@ -1,4 +1,4 @@
-set dotenv-load
+set dotenv-filename := ".env"
 
 # Starts the API service
 api:
