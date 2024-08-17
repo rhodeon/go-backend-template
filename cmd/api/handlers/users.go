@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 	api_errors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
-	domain_errors "github.com/rhodeon/go-backend-template/errors"
-	"github.com/rhodeon/go-backend-template/models"
+	domain_errors "github.com/rhodeon/go-backend-template/domain/errors"
+	"github.com/rhodeon/go-backend-template/domain/models"
 	"time"
 )
 

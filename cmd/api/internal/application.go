@@ -2,7 +2,7 @@ package internal
 
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rhodeon/go-backend-template/services"
+	"github.com/rhodeon/go-backend-template/domain/services"
 	"log/slog"
 )
 
