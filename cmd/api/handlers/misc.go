@@ -2,16 +2,11 @@ package handlers
 
 import (
 	"context"
+	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 )
 
-type PingResponse struct {
-	Body struct {
-		Status string `json:"status" enum:"OK" doc:"Acknowledgement status"`
-	}
-}
-
-func Ping(ctx context.Context, input *struct{}) (*PingResponse, error) {
-	resp := &PingResponse{}
+func Ping(ctx context.Context, input *struct{}) (*responses.PingResponse, error) {
+	resp := &responses.PingResponse{}
 	resp.Body.Status = "OK"
 	return resp, nil
 }
