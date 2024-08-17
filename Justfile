@@ -28,3 +28,8 @@ sqlc:
     ./sqlc.sh
     sqlc vet
     sqlc generate
+
+## Installs Go-based tools needed for running other tasks.
+install-tools:
+    go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
