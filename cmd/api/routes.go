@@ -20,7 +20,10 @@ func routes(app *internal.Application) http.Handler {
 	huma.NewError = api_errors.NewApiError(app.Logger)
 
 	api := humachi.New(router, huma.DefaultConfig("API", "0.1.0"))
-	api.UseMiddleware(api_middleware.Recover(api))
+	api.UseMiddleware(
+		api_middleware.Timeout(app),
+		api_middleware.Recover(api),
+	)
 
 	huma.Register(
 		api,
@@ -44,6 +47,18 @@ func routes(app *internal.Application) http.Handler {
 			Description: "Creates a new user.",
 		},
 		handlers.CreateUser(app),
+	)
+
+	huma.Register(
+		api,
+		huma.Operation{
+			OperationID: "get-user-by-id",
+			Method:      http.MethodGet,
+			Path:        "/users/{id}",
+			Tags:        []string{"users"},
+			Description: "Returns a user with the given id.",
+		},
+		handlers.GetUser(app),
 	)
 
 	return router

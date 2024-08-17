@@ -26,11 +26,14 @@ type ServerConfig struct {
 	HttpPort int    `env:"HTTP_PORT,required"`
 	BaseUrl  string `env:"BASE_URL"`
 
-	// The timeout defaults are those used by https://autostrada.dev and should be modified according to real usage if needed.
+	// The below timeout defaults are those used by https://autostrada.dev and should be modified according to real usage if needed.
 	IdleTimeout     time.Duration `env:"IDLE_TIMEOUT" envDefault:"1m"`
 	ReadTimeout     time.Duration `env:"READ_TIMEOUT" envDefault:"5s"`
-	WriteTimeout    time.Duration `env:"WRITE_TIMEOUT" envDefault:"10s"`
+	WriteTimeout    time.Duration `env:"WRITE_TIMEOUT" envDefault:"15s"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
+
+	// RequestTimeout should be lower than WriteTimeout as no request will be returned if the request exceeds the write timeout.
+	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT" envDefault:"10s"`
 }
 
 type DatabaseConfig struct {

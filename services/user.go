@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	domain_errors "github.com/rhodeon/go-backend-template/errors"
 	"github.com/rhodeon/go-backend-template/models"
@@ -42,4 +43,19 @@ func (u User) Create(ctx context.Context, dbTx database.Transaction, user models
 	}
 
 	return models.User{}.FromDbUser(dbCreatedUser), nil
+}
+
+func (u User) GetById(ctx context.Context, dbTx database.Transaction, userId int32) (models.User, error) {
+	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, userId)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return models.User{}, domain_errors.NewRecordNotFoundErr("user")
+
+		default:
+			return models.User{}, errors.Wrap(err, "unable to find user")
+		}
+	}
+
+	return models.User{}.FromDbUser(dbUser), nil
 }

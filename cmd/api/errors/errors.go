@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"context"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
 	"log/slog"
@@ -29,13 +30,20 @@ func NewApiError(logger *slog.Logger) func(int, string, ...error) huma.StatusErr
 		// Internal server errors have their underlying error changed to a generic message as
 		// clients do not need to know the inner workings of the API.
 		if status == http.StatusInternalServerError {
-			logMessage := "internal server error"
 			if len(errs) > 0 {
-				// If the error was due to a panic, the log message changes to reflect that.
-				if len(errs) == 2 && errors.Is(errs[1], ErrPanic) {
-					logMessage = "panic"
+				switch {
+				case len(errs) == 2 && errors.Is(errs[1], ErrPanic):
+					// If the error was due to a panic, the log message reflects that.
+					logger.Error("panic", slog.Any("error", errs[0].Error()))
+
+				case errors.Is(errs[0], context.Canceled):
+					// If the session is cancelled (either explicitly by the user or something else).
+					// a warning is logged. A high volume of such warning should be worth investigating.
+					logger.Warn("session cancelled")
+
+				default:
+					logger.Error("internal server error", slog.Any("error", errs[0].Error()))
 				}
-				logger.Error(logMessage, slog.Any("error", errs[0].Error()))
 			}
 
 			return &ApiError{
@@ -67,3 +75,13 @@ func NewApiError(logger *slog.Logger) func(int, string, ...error) huma.StatusErr
 // ErrPanic is used to signify that the current error being handled by NewApiError()
 // is as a result of a panic.
 var ErrPanic = errors.New("panic")
+
+// HandleUntypedError should be called in the default case of errors in the handlers after all recognised have been handled.
+// Such an error could be a generic internal server error or could be due to the request timeout being exceeded.
+// A 504 Gateway Timeout (server timeout) is returned in the latter case.
+func HandleUntypedError(ctx context.Context, err error) error {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return huma.Error504GatewayTimeout("server timeout")
+	}
+	return huma.Error500InternalServerError("", err)
+}

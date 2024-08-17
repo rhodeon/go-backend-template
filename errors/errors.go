@@ -2,20 +2,34 @@ package errors
 
 import "fmt"
 
-type DuplicateDataError struct {
+type RecordNotFoundError struct {
 	Entity string
-	Field  string
-	Value  string
 }
 
-func NewDuplicateDataError(entity string, field string, value string) DuplicateDataError {
-	return DuplicateDataError{
+func NewRecordNotFoundErr(entity string) *RecordNotFoundError {
+	return &RecordNotFoundError{
 		Entity: entity,
-		Field:  field,
-		Value:  value,
 	}
 }
 
-func (err DuplicateDataError) Error() string {
-	return fmt.Sprintf("%s with %s %q already exists", err.Entity, err.Field, err.Value)
+func (e *RecordNotFoundError) Error() string {
+	return fmt.Sprintf("%s not found", e.Entity)
+}
+
+type DuplicateDataError struct {
+	entity string
+	field  string
+	value  string
+}
+
+func NewDuplicateDataError(entity string, field string, value string) *DuplicateDataError {
+	return &DuplicateDataError{
+		entity: entity,
+		field:  field,
+		value:  value,
+	}
+}
+
+func (err *DuplicateDataError) Error() string {
+	return fmt.Sprintf("%s with %s %q already exists", err.entity, err.field, err.value)
 }
