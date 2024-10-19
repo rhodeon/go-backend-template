@@ -9,7 +9,6 @@ import (
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/database"
 	"github.com/rhodeon/go-backend-template/repositories/database/implementation/users"
-	"log/slog"
 	"strings"
 )
 
@@ -19,8 +18,8 @@ type User struct {
 
 var userService *User
 
-func newUser(repos *repositories.Repositories, logger *slog.Logger) *User {
-	userService = &User{newService(repos, logger)}
+func newUser(repos *repositories.Repositories) *User {
+	userService = &User{newService(repos)}
 	return userService
 }
 

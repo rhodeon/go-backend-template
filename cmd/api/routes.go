@@ -21,6 +21,7 @@ func routes(app *internal.Application) http.Handler {
 
 	api := humachi.New(router, huma.DefaultConfig("API", "0.1.0"))
 	api.UseMiddleware(
+		api_middleware.Logger(app),
 		api_middleware.Timeout(app),
 		api_middleware.Recover(api),
 	)

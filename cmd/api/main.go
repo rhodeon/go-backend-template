@@ -20,7 +20,7 @@ func main() {
 	}
 
 	repos := repositories.New()
-	services := services.New(repos, logger)
+	services := services.New(repos)
 
 	app := internal.NewApplication(cfg, logger, dbPool, services)
 
