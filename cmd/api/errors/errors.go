@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
+	"github.com/rhodeon/go-backend-template/internal/log"
 	"log/slog"
 	"net/http"
 )
@@ -34,7 +35,7 @@ func NewApiError(logger *slog.Logger) func(int, string, ...error) huma.StatusErr
 				switch {
 				case len(errs) == 2 && errors.Is(errs[1], ErrPanic):
 					// If the error was due to a panic, the log message reflects that.
-					logger.Error("panic", slog.Any("error", errs[0].Error()))
+					logger.Error("panic", slog.Any(log.AttrError, errs[0]))
 
 				case errors.Is(errs[0], context.Canceled):
 					// If the session is cancelled (either explicitly by the user or something else).
@@ -42,7 +43,7 @@ func NewApiError(logger *slog.Logger) func(int, string, ...error) huma.StatusErr
 					logger.Warn("session cancelled")
 
 				default:
-					logger.Error("internal server error", slog.Any("error", errs[0].Error()))
+					logger.Error("internal server error", slog.Any(log.AttrError, errs[0]))
 				}
 			}
 

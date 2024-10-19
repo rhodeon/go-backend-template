@@ -15,6 +15,10 @@ tidy:
     go mod tidy -v
     go mod vendor
 
+# Runs lint checks.
+lint:
+    golangci-lint run ./...
+
 # Runs checks including linters and vetting sqlc queries.
 vet:
     go mod verify
