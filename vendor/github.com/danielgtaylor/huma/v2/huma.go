@@ -16,8 +16,10 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,22 +34,6 @@ var bodyCallbackType = reflect.TypeOf(func(Context) {})
 var cookieType = reflect.TypeOf((*http.Cookie)(nil)).Elem()
 var fmtStringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
 var stringType = reflect.TypeOf("")
-
-// slicesIndex returns the index of the first occurrence of v in s,
-// or -1 if not present.
-func slicesIndex[E comparable](s []E, v E) int {
-	for i := range s {
-		if v == s[i] {
-			return i
-		}
-	}
-	return -1
-}
-
-// slicesContains reports whether v is present in s.
-func slicesContains[E comparable](s []E, v E) bool {
-	return slicesIndex(s, v) >= 0
-}
 
 // SetReadDeadline is a utility to set the read deadline on a response writer,
 // if possible. If not, it will not incur any allocations (unlike the stdlib
@@ -112,15 +98,6 @@ func findParams(registry Registry, op *Operation, t reflect.Type) *findResult[*p
 			return nil
 		}
 
-		if f.Type.Kind() == reflect.Pointer {
-			// TODO: support pointers? The problem is that when we dynamically
-			// create an instance of the input struct the `params.Every(...)`
-			// call cannot set them as the value is `reflect.Invalid` unless
-			// dynamically allocated, but we don't know when to allocate until
-			// after the `Every` callback has run. Doable, but a bigger change.
-			panic("pointers are not supported for path/query/header parameters")
-		}
-
 		pfi := &paramFieldInfo{
 			Type: f.Type,
 		}
@@ -141,7 +118,7 @@ func findParams(registry Registry, op *Operation, t reflect.Type) *findResult[*p
 			name = split[0]
 			// If `in` is `query` then `explode` defaults to true. Parsing is *much*
 			// easier if we use comma-separated values, so we disable explode by default.
-			if slicesContains(split[1:], "explode") {
+			if slices.Contains(split[1:], "explode") {
 				pfi.Explode = true
 			}
 			explode = &pfi.Explode
@@ -159,6 +136,15 @@ func findParams(registry Registry, op *Operation, t reflect.Type) *findResult[*p
 			}
 		} else {
 			return nil
+		}
+
+		if f.Type.Kind() == reflect.Pointer {
+			// TODO: support pointers? The problem is that when we dynamically
+			// create an instance of the input struct the `params.Every(...)`
+			// call cannot set them as the value is `reflect.Invalid` unless
+			// dynamically allocated, but we don't know when to allocate until
+			// after the `Every` callback has run. Doable, but a bigger change.
+			panic("pointers are not supported for path/query/header parameters")
 		}
 
 		pfi.Schema = SchemaFromField(registry, f, "")
@@ -189,7 +175,7 @@ func findParams(registry Registry, op *Operation, t reflect.Type) *findResult[*p
 			pfi.TimeFormat = timeFormat
 		}
 
-		if !boolTag(f, "hidden") {
+		if !boolTag(f, "hidden", false) {
 			desc := ""
 			if pfi.Schema != nil {
 				// If the schema has a description, use it. Some tools will not show
@@ -344,7 +330,7 @@ func (r *findResult[T]) everyPB(current reflect.Value, path []int, pb *PathBuffe
 			} else {
 				// The body is _always_ in a field called "Body", which turns into
 				// `body` in the path buffer, so we don't need to push it separately
-				// like the the params fields above.
+				// like the params fields above.
 				pb.Push(jsonName(field))
 			}
 		}
@@ -417,7 +403,7 @@ func _findInType[T comparable](t reflect.Type, path []int, result *findResult[T]
 			if !f.IsExported() {
 				continue
 			}
-			if slicesContains(ignore, f.Name) {
+			if slices.Contains(ignore, f.Name) {
 				continue
 			}
 			if ignoreAnonymous && f.Anonymous {
@@ -586,30 +572,30 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 		hasInputBody = true
 		inputBodyIndex = f.Index
 		if op.RequestBody == nil {
-			required := f.Type.Kind() != reflect.Ptr && f.Type.Kind() != reflect.Interface
-			if f.Tag.Get("required") == "true" {
-				required = true
-			}
-
-			contentType := "application/json"
-			if c := f.Tag.Get("contentType"); c != "" {
-				contentType = c
-			}
-			hint := getHint(inputType, f.Name, op.OperationID+"Request")
-			if nameHint := f.Tag.Get("nameHint"); nameHint != "" {
-				hint = nameHint
-			}
-			s := SchemaFromField(registry, f, hint)
-
-			op.RequestBody = &RequestBody{
-				Required: required,
-				Content: map[string]*MediaType{
-					contentType: {
-						Schema: s,
-					},
-				},
-			}
+			op.RequestBody = &RequestBody{}
 		}
+
+		required := f.Type.Kind() != reflect.Ptr && f.Type.Kind() != reflect.Interface
+		if f.Tag.Get("required") == "true" {
+			required = true
+		}
+
+		contentType := "application/json"
+		if c := f.Tag.Get("contentType"); c != "" {
+			contentType = c
+		}
+		hint := getHint(inputType, f.Name, op.OperationID+"Request")
+		if nameHint := f.Tag.Get("nameHint"); nameHint != "" {
+			hint = nameHint
+		}
+		s := SchemaFromField(registry, f, hint)
+
+		op.RequestBody.Required = required
+
+		if op.RequestBody.Content == nil {
+			op.RequestBody.Content = map[string]*MediaType{}
+		}
+		op.RequestBody.Content[contentType] = &MediaType{Schema: s}
 
 		if op.BodyReadTimeout == 0 {
 			// 5 second default
@@ -629,8 +615,11 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 		if op.RequestBody == nil {
 			op.RequestBody = &RequestBody{
 				Required: true,
-				Content:  map[string]*MediaType{},
 			}
+		}
+
+		if op.RequestBody.Content == nil {
+			op.RequestBody.Content = map[string]*MediaType{}
 		}
 
 		contentType := "application/octet-stream"
@@ -692,8 +681,19 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 		}
 	}
 
+	if op.RequestBody != nil {
+		for _, mediatype := range op.RequestBody.Content {
+			if mediatype.Schema != nil {
+				// Ensure all schema validation errors are set up properly as some
+				// parts of the schema may have been user-supplied.
+				mediatype.Schema.PrecomputeMessages()
+			}
+		}
+	}
+
 	var inSchema *Schema
 	if op.RequestBody != nil && op.RequestBody.Content != nil && op.RequestBody.Content["application/json"] != nil && op.RequestBody.Content["application/json"].Schema != nil {
+		hasInputBody = true
 		inSchema = op.RequestBody.Content["application/json"].Schema
 	}
 
@@ -950,7 +950,18 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 						switch f.Type().Elem().Kind() {
 
 						case reflect.String:
-							f.Set(reflect.ValueOf(values))
+							if f.Type() == reflect.TypeOf(values) {
+								f.Set(reflect.ValueOf(values))
+							} else {
+								//Change element type to support slice of string subtypes (enums)
+								enumValues := reflect.New(f.Type()).Elem()
+								for _, val := range values {
+									enumVal := reflect.New(f.Type().Elem()).Elem()
+									enumVal.SetString(val)
+									enumValues.Set(reflect.Append(enumValues, enumVal))
+								}
+								f.Set(enumValues)
+							}
 							pv = values
 
 						case reflect.Int:
@@ -1131,6 +1142,16 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 						f.Set(reflect.ValueOf(t))
 						pv = value
 						break
+						// Special case: url.URL
+					} else if f.Type() == urlType {
+						u, err := url.Parse(value)
+						if err != nil {
+							res.Add(pb, value, "invalid url.URL value")
+							return
+						}
+						f.Set(reflect.ValueOf(*u))
+						pv = value
+						break
 					}
 
 					// Last resort: use the `encoding.TextUnmarshaler` interface.
@@ -1263,7 +1284,7 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 						}
 					}
 
-					if hasInputBody {
+					if hasInputBody && len(inputBodyIndex) > 0 {
 						// We need to get the body into the correct type now that it has been
 						// validated. Benchmarks on Go 1.20 show that using `json.Unmarshal` a
 						// second time is faster than `mapstructure.Decode` or any of the other
@@ -1292,23 +1313,49 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 						}
 					}
 
-					buf.Reset()
-					bufPool.Put(buf)
+					if rawBodyIndex != -1 {
+						// If the raw body is used, then we must wait until *AFTER* the
+						// handler has run to return the body byte buffer to the pool, as
+						// the handler can read and modify this buffer. The safest way is
+						// to just wait until the end of this handler via defer.
+						defer bufPool.Put(buf)
+						defer buf.Reset()
+					} else {
+						// No raw body, and the body has already been unmarshalled above, so
+						// we can return the buffer to the pool now as we don't need the
+						// bytes any more.
+						buf.Reset()
+						bufPool.Put(buf)
+					}
 				}
 			}
 		}
 
 		resolvers.EveryPB(pb, v, func(item reflect.Value, _ bool) {
-			if resolver, ok := item.Addr().Interface().(Resolver); ok {
-				if errs := resolver.Resolve(ctx); len(errs) > 0 {
-					res.Errors = append(res.Errors, errs...)
-				}
-			} else if resolver, ok := item.Addr().Interface().(ResolverWithPath); ok {
-				if errs := resolver.Resolve(ctx, pb); len(errs) > 0 {
-					res.Errors = append(res.Errors, errs...)
-				}
+			if item.CanAddr() {
+				item = item.Addr()
 			} else {
+				// If the item is non-addressable (example: primitive custom type with
+				// a resolver as a map value), then we need to create a new pointer to
+				// the value to ensure the resolver can be called, regardless of whether
+				// is a value or pointer resolver type.
+				// TODO: this is inefficient and could be improved in the future.
+				ptr := reflect.New(item.Type())
+				elem := ptr.Elem()
+				elem.Set(item)
+				item = ptr
+			}
+			var errs []error
+			switch resolver := item.Interface().(type) {
+			case Resolver:
+				errs = resolver.Resolve(ctx)
+			case ResolverWithPath:
+				errs = resolver.Resolve(ctx, pb)
+			default:
 				panic("matched resolver cannot be run, please file a bug")
+			}
+			if len(errs) > 0 {
+				res.Errors = append(res.Errors, errs...)
 			}
 		})
 
@@ -1353,6 +1400,13 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 
 			ctx.SetHeader("Content-Type", ct)
 			transformAndWrite(api, ctx, status, ct, err)
+			return
+		}
+
+		if output == nil {
+			// Special case: No err or output, so just set the status code and return.
+			// This is a weird case, but it's better than panicking or returning 500.
+			ctx.SetStatus(op.DefaultStatus)
 			return
 		}
 
