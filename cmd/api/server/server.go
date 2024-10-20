@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/internal/log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,8 +15,10 @@ import (
 	"syscall"
 )
 
-// serveApi starts up a server with the app data.
-func serveApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup) error {
+// ServeApi starts up a server with the app data.
+// listenPort is used to optionally notify the caller that the server is available to accept connections, along with the connected port number.
+// This is useful to guarantee the server is active before proceeding. e.g. for tests.
+func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, listenPort chan<- int) error {
 	serverConfig := app.Config.Server
 	router := routes(app)
 
@@ -31,19 +34,29 @@ func serveApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup) er
 	shutdownError := make(chan error)
 	go handleShutdown(srv, shutdownError, backgroundWaitGroup, app)
 
-	// Start and listen on server until an error occurs.
+	// Listen and Serve are split into 2 steps here to enable notifying the caller that the
+	// server is listening for connections.
+	listener, err := net.Listen("tcp", srv.Addr)
+	if err != nil {
+		return errors.Wrap(err, "failed to bind to address")
+	}
+
+	listenPort <- listener.Addr().(*net.TCPAddr).Port
+
+	// Now the server can proceed to process connections.
 	app.Logger.Info(
-		"starting server",
+		"Starting server",
 		slog.String("env", app.Config.Environment),
 		slog.String("port", srv.Addr),
 	)
-	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+
+	if err := srv.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
 		// Return unsuccessful server shutdown errors.
 		return errors.Wrap(err, "server shutdown")
 	}
 
 	// Block flow until the shutdown error channel is updated.
-	err := <-shutdownError
+	err = <-shutdownError
 	if err != nil {
 		return err
 	}

@@ -5,8 +5,12 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 )
 
-func Ping(ctx context.Context, input *struct{}) (*responses.PingResponse, error) {
-	resp := &responses.PingResponse{}
-	resp.Body.Status = "OK"
+func Ping(_ context.Context, _ *struct{}) (*responses.PingResponse, error) {
+	resp := &responses.PingResponse{
+		Body: responses.PingResponseBody{
+			Status: "OK",
+		},
+	}
+
 	return resp, nil
 }

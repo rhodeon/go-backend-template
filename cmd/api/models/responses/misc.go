@@ -1,7 +1,9 @@
 package responses
 
 type PingResponse struct {
-	Body struct {
-		Status string `json:"status" enum:"OK" doc:"Acknowledgement status"`
-	}
+	Body PingResponseBody
+}
+
+type PingResponseBody struct {
+	Status string `json:"status" enum:"OK" doc:"Acknowledgement status"`
 }
