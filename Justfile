@@ -27,11 +27,16 @@ vet:
     ./sqlc.sh
     sqlc vet
 
+# Runs all tests in codebase
+test:
+    go test ./...
+
 # Regenerates sqlc queries.
 sqlc:
     ./sqlc.sh
     sqlc vet
     sqlc generate
+
 
 ## Installs Go-based tools needed for running other tasks.
 install-tools:
