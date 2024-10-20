@@ -19,7 +19,6 @@ func CreateUser(app *internal.Application) func(context.Context, *requests.Creat
 			Email:    req.Body.Email,
 		})
 		if err != nil {
-			//helpers.GetContextLogger(ctx).ErrorContext(ctx, "blah", slog.Any(log.AttrError, err))
 			var duplicateErr *domain_errors.DuplicateDataError
 			switch {
 			case errors.As(err, &duplicateErr):
