@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
+	"github.com/rhodeon/go-backend-template/internal/log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -47,7 +48,7 @@ func serveApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup) er
 		return err
 	}
 
-	app.Logger.Info("stopped server")
+	app.Logger.Info("Stopped server")
 	return nil
 }
 
@@ -65,7 +66,7 @@ func handleShutdown(server *http.Server, shutdownErr chan error, backgroundWg *s
 	ctx, cancel := context.WithTimeout(context.Background(), app.Config.Server.ShutdownTimeout)
 	defer cancel()
 
-	app.Logger.Info("shutting down server", slog.String("signal", s.String()))
+	app.Logger.Info("Shutting down server", slog.String(log.AttrSignal, s.String()))
 
 	// Shut down the server and update the error channel  to resume execution on the main goroutine.
 	err := server.Shutdown(ctx)
@@ -74,7 +75,7 @@ func handleShutdown(server *http.Server, shutdownErr chan error, backgroundWg *s
 	}
 
 	// Wait for background tasks to complete before shutting down the application
-	app.Logger.Info("completing background tasks...")
+	app.Logger.Info("Completing background tasks...")
 	backgroundWg.Wait()
 	shutdownErr <- nil
 }

@@ -5,4 +5,5 @@ const (
 	AttrErrorTrace = "trace"
 	AttrErrorMsg   = "msg"
 	AttrRequestId  = "request_id"
+	AttrSignal     = "signal"
 )
