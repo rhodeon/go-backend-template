@@ -17,7 +17,7 @@ func routes(app *internal.Application) http.Handler {
 	router.Use(middleware.Logger)
 
 	// The default error structure of huma is overwritten by a custom ApiError.
-	huma.NewError = api_errors.NewApiError(app.Logger)
+	huma.NewError = api_errors.NewApiError()
 
 	api := humachi.New(router, huma.DefaultConfig("API", "0.1.0"))
 	api.UseMiddleware(

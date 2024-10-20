@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"github.com/rhodeon/go-backend-template/internal/log"
 	"log/slog"
 	"net/http"
@@ -25,28 +26,12 @@ func (e *ApiError) GetStatus() int {
 	return e.status
 }
 
-// NewApiError is a reimplementation of the default huma.NewError and allows ApiError to be used as the default over huma.ErrorModel.
-func NewApiError(logger *slog.Logger) func(int, string, ...error) huma.StatusError {
+// NewApiError is a reimplementation of the default huma.NewErrorWithContext and allows ApiError to be used as the default over huma.ErrorModel.
+func NewApiError() func(int, string, ...error) huma.StatusError {
 	return func(status int, msg string, errs ...error) huma.StatusError {
 		// Internal server errors have their underlying error changed to a generic message as
 		// clients do not need to know the inner workings of the API.
 		if status == http.StatusInternalServerError {
-			if len(errs) > 0 {
-				switch {
-				case len(errs) == 2 && errors.Is(errs[1], ErrPanic):
-					// If the error was due to a panic, the log message reflects that.
-					logger.Error("panic", slog.Any(log.AttrError, errs[0]))
-
-				case errors.Is(errs[0], context.Canceled):
-					// If the session is cancelled (either explicitly by the user or something else).
-					// a warning is logged. A high volume of such warning should be worth investigating.
-					logger.Warn("session cancelled")
-
-				default:
-					logger.Error("internal server error", slog.Any(log.AttrError, errs[0]))
-				}
-			}
-
 			return &ApiError{
 				status: status,
 				Detail: "internal server error",
@@ -73,16 +58,26 @@ func NewApiError(logger *slog.Logger) func(int, string, ...error) huma.StatusErr
 	}
 }
 
-// ErrPanic is used to signify that the current error being handled by NewApiError()
-// is as a result of a panic.
-var ErrPanic = errors.New("panic")
-
 // HandleUntypedError should be called in the default case of errors in the handlers after all recognised have been handled.
-// Such an error could be a generic internal server error or could be due to the request timeout being exceeded.
+// Such an error could be a generic internal server error, a cancelled session, or could be due to the request timeout being exceeded.
 // A 504 Gateway Timeout (server timeout) is returned in the latter case.
 func HandleUntypedError(ctx context.Context, err error) error {
-	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+	logger := helpers.GetContextLogger(ctx)
+
+	switch {
+	case errors.Is(ctx.Err(), context.DeadlineExceeded):
+		// If the request times out, a warning is logged. A high volume of such warning should be worth investigating.
+		logger.WarnContext(ctx, "Server timed out")
 		return huma.Error504GatewayTimeout("server timeout")
+
+	case errors.Is(err, context.Canceled):
+		// If the session is cancelled (either explicitly by the user or something else).
+		// a warning is logged. A high volume of such warning should be worth investigating.
+		logger.WarnContext(ctx, "Session cancelled")
+		return huma.Error500InternalServerError("", err)
+
+	default:
+		logger.ErrorContext(ctx, "Internal server error", slog.Any(log.AttrError, err))
+		return huma.Error500InternalServerError("", err)
 	}
-	return huma.Error500InternalServerError("", err)
 }

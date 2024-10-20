@@ -10,9 +10,6 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 	domain_errors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
-	"github.com/rhodeon/go-backend-template/internal/helpers"
-	"github.com/rhodeon/go-backend-template/internal/log"
-	"log/slog"
 )
 
 func CreateUser(app *internal.Application) func(context.Context, *requests.CreateUserRequest) (*responses.UserResponse, error) {
@@ -22,7 +19,7 @@ func CreateUser(app *internal.Application) func(context.Context, *requests.Creat
 			Email:    req.Body.Email,
 		})
 		if err != nil {
-			helpers.GetContextLogger(ctx).ErrorContext(ctx, "blah", slog.Any(log.AttrError, err))
+			//helpers.GetContextLogger(ctx).ErrorContext(ctx, "blah", slog.Any(log.AttrError, err))
 			var duplicateErr *domain_errors.DuplicateDataError
 			switch {
 			case errors.As(err, &duplicateErr):
