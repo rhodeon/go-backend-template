@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"github.com/go-resty/resty/v2"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 )
@@ -23,11 +24,6 @@ func TestPing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		t.Errorf("want status code %d; got %d", http.StatusOK, resp.StatusCode())
-	}
-
-	if pingResponseBody.Status != "OK" {
-		t.Errorf("want status code %s; got %s", "OK", pingResponseBody.Status)
-	}
+	assert.Equal(t, http.StatusOK, resp.StatusCode())
+	assert.Equal(t, "OK", pingResponseBody.Status)
 }
