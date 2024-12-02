@@ -3,6 +3,7 @@ package test_utils
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"net/url"
 	"os"
 	"path/filepath"
 )
@@ -28,4 +29,14 @@ func getProjectRootDir() (string, error) {
 			dir = parent
 		}
 	}
+}
+
+// JoinUrlPath is a thin wrapper around url.JoinPath removing the returned error from the signature for easier use in tests.
+func JoinUrlPath(base string, paths ...string) string {
+	result, err := url.JoinPath(base, paths...)
+	if err != nil {
+		panic(err)
+	}
+
+	return result
 }

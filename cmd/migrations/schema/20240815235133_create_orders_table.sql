@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS public.posts
 (
-    id         serial PRIMARY KEY,
+    id         int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     content    text        NOT NULL,
     user_id    int REFERENCES public.users (id) ON DELETE CASCADE ON UPDATE CASCADE,
     created_at timestamptz NOT NULL DEFAULT now(),

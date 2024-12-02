@@ -24,7 +24,6 @@ Each depends on the next.
 There's currently an implementation of a small API, meant to show the patterns for building a more fleshed out system.
 
 ## Todo
-- Add tests.
 - More package-level comments.
 - Utilise more features of Huma (and OpenAPI) for a more substantial documentation.
 - Integrate non-database services.

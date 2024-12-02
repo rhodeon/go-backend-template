@@ -3,6 +3,7 @@ package test_utils
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -130,9 +131,37 @@ func seedData(ctx context.Context, dbPool *pgxpool.Pool) error {
 				return errors.Wrap(err, fmt.Sprintf("reading seed file for table %q", tableName))
 			}
 
-			insertionQuery := fmt.Sprintf("INSERT INTO %s SELECT * FROM json_populate_recordset(NULL::%s, $1)", tableName, tableName)
+			insertionQuery := fmt.Sprintf("INSERT INTO %s OVERRIDING SYSTEM VALUE SELECT * FROM json_populate_recordset(NULL::%s, $1)", tableName, tableName)
 			if _, err := dbTx.Exec(ctx, insertionQuery, data); err != nil {
 				return errors.Wrap(err, fmt.Sprintf("inserting data for table %q", tableName))
+			}
+
+			// Although this isn't directly stated in the Postgres docs (as far as I can tell),
+			// inserting an auto-incrementing row with an explicit ID rather than depending on the generated default prevents the next value from being updated by Postgres internally.
+			// So this needs to be done manually in order to prevent unique key conflicts from any future operations that insert into the affected table.
+			// More details: https://stackoverflow.com/a/9091979
+			// This can be removed entirely if all the primary keys are non-incrementing values like UUIDs.
+			type identityTable struct {
+				Id int `json:"id"`
+			}
+
+			err = json.Unmarshal(data, &[]identityTable{})
+			if err != nil {
+				// If the deserialization fails, the "id" column of the table is not an integer and hence cannot auto-increment. This phase is skipped in such a case.
+				continue
+			}
+
+			var sequenceName string
+			err = dbTx.QueryRow(ctx, "SELECT pg_get_serial_sequence($1, 'id')", tableName).Scan(&sequenceName)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("getting sequence name for table %q", tableName))
+			}
+
+			columnName := "id"
+			// With this, the next insertion to the table will start from a valid ID.
+			setValQuery := fmt.Sprintf("SELECT setval('%s', (SELECT MAX(%s) FROM %s))", sequenceName, columnName, tableName)
+			if _, err := dbTx.Exec(ctx, setValQuery); err != nil {
+				return errors.Wrap(err, fmt.Sprintf("updating starting ID value for table %q", tableName))
 			}
 		}
 	}

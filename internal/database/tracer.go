@@ -43,7 +43,7 @@ func (t tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.Tr
 			}
 		}
 
-		t.logger.Debug(fmt.Sprintf("Executing db query:\n%s\nargs:%s", data.SQL, render))
+		t.logger.Info(fmt.Sprintf("Executing db query:\n%s\nargs:%s", data.SQL, render))
 	}
 
 	return ctx

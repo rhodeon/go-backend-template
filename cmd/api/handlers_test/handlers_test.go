@@ -11,6 +11,7 @@ import (
 	"github.com/rhodeon/go-backend-template/test_utils"
 	"log/slog"
 	"sync"
+	"time"
 )
 
 // spawnServer sets up a server and data common to all tests in the package.
@@ -21,7 +22,12 @@ func spawnServer() (*internal.Application, error) {
 		DebugMode:   false,
 		Database:    internal.DatabaseConfig{},
 		Server: internal.ServerConfig{
-			HttpPort: 0, // A port of 0 makes the server connect to any available port.
+			HttpPort:        0, // A port of 0 makes the server connect to any available port.
+			IdleTimeout:     1 * time.Minute,
+			ReadTimeout:     5 * time.Second,
+			WriteTimeout:    15 * time.Second,
+			ShutdownTimeout: 5 * time.Second,
+			RequestTimeout:  10 * time.Second,
 		},
 	}
 
