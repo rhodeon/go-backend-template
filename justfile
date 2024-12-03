@@ -1,6 +1,6 @@
 set dotenv-filename := ".env"
 
-dev_tools_dir := justfile_directory() + "/dev-tools"
+dev_tools_dir := justfile_directory() + "/.dev-tools"
 
 # The dev tools directory is added to $PATH to make the installed binaries usable by recipes.
 export PATH := dev_tools_dir + ":" + env_var("PATH")
@@ -11,11 +11,12 @@ default:
 
 # This should be the first non-default recipe run after cloning the repository. It makes setups needed for the lifetime of the project.
 init:
-    # Since the .git folder doesn't get tracked as path of the repository, hooks are stored in a separate directory which is tracked instead.
-    # This command makes git use the tracked directly for hooks instead of the default.
-    git config core.hooksPath .git-hooks
+    @# Since the .git folder doesn't get tracked as path of the repository, hooks are stored in a separate directory which is tracked instead.
+    @# This command makes git use the tracked directly for hooks instead of the default.
+    @echo "configuring git hooks directory..."
+    @git config core.hooksPath .git-hooks
 
-    # For a fresh clone, all development tools need to be installed.
+    @# For a fresh clone, all development tools need to be installed.
     @just install-dev-tools
 
 # Installs tools needed for running other tasks to aid development.
@@ -52,7 +53,6 @@ lint:
 
 # Runs checks including linters and vetting sqlc queries.
 vet:
-    echo $API_DB_USER
     @echo "vetting Go code..."
     @go mod verify
     @golangci-lint run --fix ./...
