@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Fix code formatting.
+just tidy
+
+# While all files are formatted, only files which were already staged are staged again.
+# This is done to prevent accidental staging of intentionally unstaged files.
+# The staged files are expanded into an array to get rid of new lines as this will be used for input into `git add`.
+staged_files=($(git diff --name-only --cached))
+git add -- $staged_files

@@ -9,9 +9,19 @@ export PATH := dev_tools_dir + ":" + env_var("PATH")
 default:
     @just --list
 
+# This should be the first non-default recipe run after cloning the repository. It makes setups needed for the lifetime of the project.
+init:
+    # Since the .git folder doesn't get tracked as path of the repository, hooks are stored in a separate directory which is tracked instead.
+    # This command makes git use the tracked directly for hooks instead of the default.
+    git config core.hooksPath .git-hooks
+
+    # For a fresh clone, all development tools need to be installed.
+    @just install-dev-tools
+
 # Installs tools needed for running other tasks to aid development.
 install-dev-tools:
     @mkdir -p {{ dev_tools_dir }}
+    @echo "installing development tools into {{ dev_tools_dir }}..."
     GOBIN={{ dev_tools_dir }} go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.27.0
     GOBIN={{ dev_tools_dir }} go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
 

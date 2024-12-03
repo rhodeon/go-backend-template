@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# The project must be compilable, adhere to all lints and pass all tests before being pushed.
+just vet
+just test
