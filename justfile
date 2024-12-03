@@ -4,7 +4,7 @@ dev_tools_dir := "dev-tools"
 
 # Default recipe to display all available recipes and their information.
 default:
-  @just --list
+    @just --list
 
 # Installs tools needed for running other tasks to aid development.
 install-dev-tools:
@@ -22,7 +22,11 @@ api:
 
 # Runs migrations. Run `just migrations` to see all commands.
 migrations *args:
-    cd ./cmd/migrations && go run . {{args}}
+    cd ./cmd/migrations && go run . {{ args }}
+
+# Runs all tests in codebase
+test:
+    go test ./...
 
 # Formats the codebase uniformly and vendors dependencies.
 tidy: set-dev-tools
@@ -39,15 +43,14 @@ lint: set-dev-tools
 
 # Runs checks including linters and vetting sqlc queries.
 vet: set-dev-tools
-    go mod verify
-    go vet ./...
-    golangci-lint run ./...
-    ./sqlc.sh
-    sqlc vet
+    echo $API_DB_USER
+    @echo "vetting Go code..."
+    @go mod verify
+    @golangci-lint run --fix ./...
 
-# Runs all tests in codebase
-test:
-    go test ./...
+    @echo "vetting SQL code..."
+    @./sqlc.sh
+    @sqlc vet
 
 # Regenerates sqlc queries.
 sqlc: set-dev-tools

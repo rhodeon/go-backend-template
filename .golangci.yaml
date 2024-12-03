@@ -18,6 +18,7 @@ linters:
     - importas
     - gofumpt
     - gofmt # Although gofumpt covers all gofmt format rules, gofmt is still needed for pattern replacement which gofumpt doesn't support.
+    - govet
 
 linters-settings:
   depguard:
@@ -68,3 +69,9 @@ linters-settings:
 
       - pattern: 'a[b:len(a)]'
         replacement: 'a[b:]'
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+      - shadow
