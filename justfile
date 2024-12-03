@@ -1,6 +1,9 @@
 set dotenv-filename := ".env"
 
-dev_tools_dir := "dev-tools"
+dev_tools_dir := justfile_directory() + "/dev-tools"
+
+# The dev tools directory is added to $PATH to make the installed binaries usable by recipes.
+export PATH := dev_tools_dir + ":" + env_var("PATH")
 
 # Default recipe to display all available recipes and their information.
 default:
@@ -9,12 +12,8 @@ default:
 # Installs tools needed for running other tasks to aid development.
 install-dev-tools:
     @mkdir -p {{ dev_tools_dir }}
-    GOBIN=$(pwd)/dev-tools go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.27.0
-    GOBIN=$(pwd)/dev-tools go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
-
-# Adds the relatively installed dev tools to $PATH to make them usable by other recipes. Should be depended on by any recipe which uses a dev tool.
-set-dev-tools:
-    @export PATH="{{ dev_tools_dir }}:$PATH"
+    GOBIN={{ dev_tools_dir }} go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.27.0
+    GOBIN={{ dev_tools_dir }} go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
 
 # Starts the API service
 api:
@@ -29,7 +28,7 @@ test:
     go test ./...
 
 # Formats the codebase uniformly and vendors dependencies.
-tidy: set-dev-tools
+tidy:
     @echo "formatting codebase..."
     @golangci-lint run --fix --enable-only gofmt,gofumpt
 
@@ -38,11 +37,11 @@ tidy: set-dev-tools
     go mod vendor
 
 # Runs lint checks.
-lint: set-dev-tools
+lint:
     golangci-lint run ./...
 
 # Runs checks including linters and vetting sqlc queries.
-vet: set-dev-tools
+vet:
     echo $API_DB_USER
     @echo "vetting Go code..."
     @go mod verify
@@ -53,7 +52,7 @@ vet: set-dev-tools
     @sqlc vet
 
 # Regenerates sqlc queries.
-sqlc: set-dev-tools
+sqlc:
     ./sqlc.sh
     sqlc vet
     sqlc generate
