@@ -6,7 +6,7 @@
 
 ## Getting Started
 - Install the [just](https://just.systems/) automation tool to run commands in the `Justfile`.
-- Run `just install-tools` to install the binaries needed for other phases.
+- Run `just install-tools` to install the binaries needed for other phases. They are installed into a relative `dev-tools` folder to avoid conflicts with globally installed versions.
 - Set up a new `.env` file using the vars set in .env.example as a guide.
 - Run `just migrations up` to set up the database.
 - Run `just api` to start the server.
