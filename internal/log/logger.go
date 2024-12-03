@@ -1,10 +1,11 @@
 package log
 
 import (
-	"github.com/lmittmann/tint"
 	"log/slog"
 	"os"
 	"time"
+
+	"github.com/lmittmann/tint"
 )
 
 func NewLogger(debugMode bool) *slog.Logger {

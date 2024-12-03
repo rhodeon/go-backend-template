@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
 	api_errors "github.com/rhodeon/go-backend-template/cmd/api/errors"

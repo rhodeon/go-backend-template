@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	domain_errors "github.com/rhodeon/go-backend-template/domain/errors"
@@ -9,7 +11,6 @@ import (
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/database"
 	"github.com/rhodeon/go-backend-template/repositories/database/implementation/users"
-	"strings"
 )
 
 type User struct {

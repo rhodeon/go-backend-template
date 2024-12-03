@@ -1,8 +1,9 @@
 package common_models
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Post struct {

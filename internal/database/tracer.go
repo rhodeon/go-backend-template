@@ -3,9 +3,10 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"log/slog"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // tracer implements the pgx.QueryTracer interface to provider debugging and tracing capabilities for queries.
@@ -33,7 +34,7 @@ func (t tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.Tr
 			strings.EqualFold(data.SQL, "end") {
 			return ctx
 		}
-		var render = "\n"
+		render := "\n"
 		for i, arg := range data.Args {
 			switch arg.(type) {
 			case []byte:

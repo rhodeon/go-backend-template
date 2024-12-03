@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"net/http"
 	"runtime/debug"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 )
 
 // Recover logs any existing panics then writes an internal server error to the response.

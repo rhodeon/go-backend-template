@@ -16,6 +16,8 @@ linters:
     - errorlint
     - sloglint
     - importas
+    - gofumpt
+    - gofmt # Although gofumpt covers all gofmt format rules, gofmt is still needed for pattern replacement which gofumpt doesn't support.
 
 linters-settings:
   depguard:
@@ -58,3 +60,11 @@ linters-settings:
     # It would be ideal to have this active, but currently enabling both no-unaliased and no-extra-aliases fails:
     # https://github.com/julz/importas/issues/15
     # no-extra-aliases: true
+
+  gofmt:
+    rewrite-rules:
+      - pattern: 'interface{}'
+        replacement: 'any'
+
+      - pattern: 'a[b:len(a)]'
+        replacement: 'a[b:]'

@@ -3,10 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/pkg/errors"
 	"log/slog"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pkg/errors"
 )
 
 // Connect establishes a connection to the given Postgres database and returns a connection pool to be used for further access.

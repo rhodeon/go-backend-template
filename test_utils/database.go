@@ -5,6 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -14,11 +20,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 func setupDatabaseContainer(ctx context.Context) error {

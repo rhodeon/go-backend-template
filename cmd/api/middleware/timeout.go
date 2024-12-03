@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 )

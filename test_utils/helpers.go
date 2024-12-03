@@ -2,10 +2,11 @@ package test_utils
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"net/url"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 // getProjectRootDir determines the root directory of the project by finding the first location with the go.mod file.

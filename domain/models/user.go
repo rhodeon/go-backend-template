@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/rhodeon/go-backend-template/repositories/database/implementation/users"
 	"time"
+
+	"github.com/rhodeon/go-backend-template/repositories/database/implementation/users"
 )
 
 type User struct {

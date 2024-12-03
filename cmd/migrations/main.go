@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"os"
+
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rhodeon/go-backend-template/cmd/migrations/internal"
 	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/internal/log"
-	"os"
 
-	"flag"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )

@@ -24,10 +24,12 @@ api:
 migrations *args:
     cd ./cmd/migrations && go run . {{args}}
 
-# Formats the codebase and vendors dependencies.
-tidy:
+# Formats the codebase uniformly and vendors dependencies.
+tidy: set-dev-tools
     @echo "formatting codebase..."
-    go fmt ./...
+    @golangci-lint run --fix --enable-only gofmt,gofumpt
+
+    @echo "tidying dependencies..."
     go mod tidy -v
     go mod vendor
 

@@ -2,14 +2,15 @@ package handlers_test
 
 import (
 	"context"
+	"net/http"
+	"testing"
+
 	"github.com/go-resty/resty/v2"
 	api_errors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/requests"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 	"github.com/rhodeon/go-backend-template/test_utils"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"testing"
 )
 
 func TestCreateUser_success(t *testing.T) {
@@ -53,7 +54,6 @@ FROM users
 ORDER BY created_at DESC 
 LIMIT 1`).
 		Scan(&persistedUser.Username, &persistedUser.Email)
-
 	if err != nil {
 		t.Fatal(err)
 	}

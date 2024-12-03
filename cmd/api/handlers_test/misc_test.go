@@ -1,12 +1,13 @@
 package handlers_test
 
 import (
+	"net/http"
+	"testing"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 	"github.com/rhodeon/go-backend-template/test_utils"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"testing"
 )
 
 func TestPing(t *testing.T) {

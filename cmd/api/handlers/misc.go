@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 )
 

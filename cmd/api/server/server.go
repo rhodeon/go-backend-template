@@ -3,9 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/rhodeon/go-backend-template/cmd/api/internal"
-	"github.com/rhodeon/go-backend-template/internal/log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -13,6 +10,10 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/pkg/errors"
+	"github.com/rhodeon/go-backend-template/cmd/api/internal"
+	"github.com/rhodeon/go-backend-template/internal/log"
 )
 
 // ServeApi starts up a server with the app data.

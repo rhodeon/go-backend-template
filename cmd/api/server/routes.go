@@ -1,6 +1,8 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
@@ -9,7 +11,6 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	api_middleware "github.com/rhodeon/go-backend-template/cmd/api/middleware"
-	"net/http"
 )
 
 func routes(app *internal.Application) http.Handler {

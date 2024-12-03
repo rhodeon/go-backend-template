@@ -1,13 +1,14 @@
 package main
 
 import (
+	"sync"
+
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/server"
 	"github.com/rhodeon/go-backend-template/domain/services"
 	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/internal/log"
 	"github.com/rhodeon/go-backend-template/repositories"
-	"sync"
 )
 
 func main() {

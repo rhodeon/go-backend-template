@@ -3,15 +3,16 @@ package handlers_test
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"sync"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/server"
 	"github.com/rhodeon/go-backend-template/domain/services"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/test_utils"
-	"log/slog"
-	"sync"
-	"time"
 )
 
 // spawnServer sets up a server and data common to all tests in the package.

@@ -5,9 +5,7 @@ import (
 	"log"
 )
 
-var (
-	projectRootDir string
-)
+var projectRootDir string
 
 // init sets up the resources needed before running integration tests.
 func init() {
