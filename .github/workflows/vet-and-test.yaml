@@ -1,0 +1,50 @@
+name: Vet and Test
+
+on:
+  push:
+    branches:
+      - '*'
+
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    env:
+      TEST_POSTGRES_CONTAINER: "docker:io/postgres:16"
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up dotenv file
+      - name: Setup dotenv
+        run: |
+          touch .env |
+          echo "TEST_POSTGRES_CONTAINER='${TEST_POSTGRES_CONTAINER}'" >> .env
+
+      # Set up Go
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+
+      # Install Just
+      - name: Install Just
+        uses: extractions/setup-just@v2
+
+      # Install Development Tools
+      - name: Install Development Tools
+        run: just install-dev-tools
+
+      # Run Vet Checks
+      - name: Run Vet
+        run: just vet
+
+      # Run Tests
+      - name: Run Tests
+        run: just test
