@@ -49,9 +49,9 @@ jobs:
         run: |
           # Install Postgres client to use psql (https://www.postgresql.org/download/linux/ubuntu)
           sudo apt update
-          DEBIAN_FRONTEND=noninteractive sudo apt install -y postgresql-common
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
-          DEBIAN_FRONTEND=noninteractive sudo apt install -y postgresql-client-16
+          sudo apt install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt install -y postgresql-client-16
           
           # Create user and database needed for migration
           psql -h localhost -U postgres -c "CREATE USER user WITH PASSWORD 'password';"
