@@ -10,11 +10,25 @@ on:
       - '*'
 
 jobs:
-  ci:
+  vet-and-test:
     runs-on: ubuntu-latest
 
     env:
       TEST_POSTGRES_CONTAINER: "docker:io/postgres:16"
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       # Checkout the repository
@@ -27,19 +41,42 @@ jobs:
           touch .env |
           echo "TEST_POSTGRES_CONTAINER='${TEST_POSTGRES_CONTAINER}'" >> .env
 
+      # Set up Just
+      - name: Setup Just
+        uses: extractions/setup-just@v2
+
+      - name: Setup database
+        run: |
+          # Install Postgres client to use psql (https://www.postgresql.org/download/linux/ubuntu)
+          sudo apt update
+          DEBIAN_FRONTEND=noninteractive sudo apt install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+          DEBIAN_FRONTEND=noninteractive sudo apt install -y postgresql-client-16
+          
+          # Create user and database needed for migration
+          psql -h localhost -U postgres -c "CREATE USER user WITH PASSWORD 'password';"
+          psql -h localhost -U postgres -c "CREATE DATABASE go-backend-template OWNER user;
+          
+          # Migrate database
+          just migrations up;
+
       # Set up Go
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: "1.23"
 
-      # Install Just
-      - name: Install Just
-        uses: extractions/setup-just@v2
+      # Set up golangci-lint
+      - name: Setup golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
 
-      # Install Development Tools
-      - name: Install Development Tools
-        run: just install-dev-tools
+      # Set up sqlc
+      - name: Setup sqlc
+        uses: sqlc-dev/setup-sqlc@v3
+        with:
+          sqlc-version: 1.27.0
 
       # Run Vet Checks
       - name: Run Vet
