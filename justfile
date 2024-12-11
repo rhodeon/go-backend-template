@@ -55,7 +55,7 @@ lint:
 vet:
     @echo "vetting Go code..."
     @go mod verify
-    @golangci-lint run --fix ./...
+    @golangci-lint run ./...
 
     @echo "vetting SQL code..."
     @./sqlc.sh

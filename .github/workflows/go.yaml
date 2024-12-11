@@ -1,0 +1,60 @@
+name: Go vet and tests
+
+on:
+  push:
+    branches:
+      - '*'
+
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  vet:
+    name: Verify go modules and runs lint checks
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+
+      - name: Setup golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
+
+      - name: Run vet checks
+        run: |
+          go mod verify |
+          golangci-lint run ./...
+
+  test:
+    name: Run tests
+
+    runs-on: ubuntu-latest
+
+    env:
+      TEST_POSTGRES_CONTAINER: "docker:io/postgres:16"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup dotenv
+        run: |
+          touch .env |
+          echo "TEST_POSTGRES_CONTAINER='${TEST_POSTGRES_CONTAINER}'" >> .env
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+
+      - name: Run tests
+        run: go test ./...
