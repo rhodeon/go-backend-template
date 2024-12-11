@@ -25,13 +25,13 @@ import (
 func setupDatabaseContainer(ctx context.Context) error {
 	goose.SetLogger(goose.NopLogger())
 
-	fmt.Println("PG_DOCKER", config.PostgresContainer)
-	fmt.Println("PG_DOCKER", config.PostgresContainer)
-	fmt.Println("PG_DOCKER", config.PostgresContainer)
-	fmt.Println("PG_DOCKER", config.PostgresContainer)
+	fmt.Printf("PG_DOCKER: %q\n", config.PostgresContainer)
+	fmt.Printf("PG_DOCKER: %q\n", config.PostgresContainer)
+	fmt.Printf("PG_DOCKER: %q\n", config.PostgresContainer)
+	fmt.Printf("PG_DOCKER: %q\n", config.PostgresContainer)
 
 	postgresContainer, err := postgres.Run(ctx,
-		"docker.io/postgres:16",
+		config.PostgresContainer,
 		postgres.WithDatabase(config.Database.Name),
 		postgres.WithUsername(config.Database.User),
 		postgres.WithPassword(config.Database.Pass),

@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	PostgresContainer string `env:"TEST_POSTGRES_CONTAINER" envDefault:"required"`
+	PostgresContainer string `env:"TEST_POSTGRES_CONTAINER,required"`
 
 	Database *database.Config
 }
