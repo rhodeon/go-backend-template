@@ -36,7 +36,7 @@ migrations *args:
 
 # Runs all tests in codebase
 test:
-    go test -v ./...
+    go test ./...
 
 # Formats the codebase uniformly and vendors dependencies.
 tidy:
