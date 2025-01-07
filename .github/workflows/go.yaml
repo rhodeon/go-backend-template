@@ -57,4 +57,4 @@ jobs:
           go-version: 1.23
 
       - name: Run tests
-        run: go test
+        run: go test ./...
