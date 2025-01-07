@@ -10,29 +10,29 @@ on:
       - '*'
 
 jobs:
-#  vet:
-#    name: Verify modules and lint
-#
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v3
-#
-#      - name: Setup Go
-#        uses: actions/setup-go@v4
-#        with:
-#          go-version: 1.23
-#
-#      - name: Setup golangci-lint
-#        uses: golangci/golangci-lint-action@v6
-#        with:
-#          version: v1.62.2
-#
-#      - name: Run vet checks
-#        run: |
-#          go mod verify |
-#          golangci-lint run ./...
+  vet:
+    name: Verify modules and lint
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v3
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: "v1.62.2"
+
+      - name: Run vet checks
+        run: |
+          go mod verify |
+          golangci-lint run ./...
 
   test:
     name: Run tests
@@ -43,7 +43,7 @@ jobs:
       TEST_POSTGRES_CONTAINER: "postgres:16" # "postgres:16" needs to be used here, without the "docker.io" prefix otherwise the image pull breaks due to an invalid reference format.
 
     steps:
-      - name: Checkout code
+      - name: Checkout codebase
         uses: actions/checkout@v3
 
       - name: Setup dotenv
@@ -57,4 +57,4 @@ jobs:
           go-version: 1.23
 
       - name: Run tests
-        run: go test -v ./...
+        run: go test

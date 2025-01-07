@@ -27,9 +27,9 @@ func parseConfig() (*Config, error) {
 	cfg.Database = &database.Config{
 		Host:     "localhost",
 		Port:     "5432",
-		User:     "user",
-		Pass:     "password",
-		Name:     "agw_test",
+		User:     "test_user",
+		Pass:     "test_pass",
+		Name:     "test_db",
 		SslMode:  "disable",
 		MaxConns: 1,
 	}

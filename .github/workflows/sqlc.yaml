@@ -31,6 +31,8 @@ env:
 
 jobs:
   sqlc:
+    name: Run sqlc diff and vet
+
     runs-on: ubuntu-latest
 
     services:

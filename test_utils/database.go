@@ -25,11 +25,6 @@ import (
 func setupDatabaseContainer(ctx context.Context) error {
 	goose.SetLogger(goose.NopLogger())
 
-	fmt.Printf("PG_DOCKER: %q\n", config.PostgresContainer)
-	fmt.Printf("PG_DOCKER: %q\n", config.PostgresContainer)
-	fmt.Printf("PG_DOCKER: %q\n", config.PostgresContainer)
-	fmt.Printf("PG_DOCKER: %q\n", config.PostgresContainer)
-
 	postgresContainer, err := postgres.Run(ctx,
 		config.PostgresContainer,
 		postgres.WithDatabase(config.Database.Name),
