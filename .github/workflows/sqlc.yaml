@@ -1,4 +1,4 @@
-name: sqlc
+name: Sqlc operations
 
 on:
   push:
@@ -9,38 +9,78 @@ on:
     branches:
       - '*'
 
-jobs:
-#  diff:
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#      - uses: sqlc-dev/setup-sqlc@v3
-#        with:
-#          sqlc-version: '1.27.0'
-#      - run: sqlc diff
+env:
+  POSTGRES_HOST: "localhost"
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: "test_user"
+  POSTGRES_PASSWORD: "test_pass"
+  POSTGRES_DB: "test_db"
 
-  vet:
+  MIGRATION_DB_HOST: "localhost"
+  MIGRATION_DB_PORT: 5432
+  MIGRATION_DB_USER: "test_user"
+  MIGRATION_DB_PASS: "test_pass"
+  MIGRATION_DB_NAME: "test_db"
+
+  # The API_DB envs are needed for populating sqlc.sh.
+  API_DB_HOST: "localhost"
+  API_DB_PORT: 5432
+  API_DB_USER: "test_user"
+  API_DB_PASS: "test_pass"
+  API_DB_NAME: "test_db"
+
+jobs:
+  sqlc:
     runs-on: ubuntu-latest
 
-    steps:
-      # Installs sqlc
-      - uses: actions/checkout@v3
-      - uses: sqlc-dev/setup-sqlc@v3
-        with:
-          sqlc-version: '1.27.0'
+    services:
+      postgres:
+        image: postgres:16
 
-      # Starts a PostgreSQL server
-      - uses: sqlc-dev/action-setup-postgres@master
-        id: postgres
-        with:
-          username: ci
-          password: password
-          database: test
-          port: 34837
-          postgres-version: "16"
-
-      # Runs sqlc vet
-      - run: sqlc vet
         env:
-          POSTGRESQL_SERVER_URI: ${{ steps.postgres.outputs.connection-uri }}?sslmode=disable
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+
+        ports:
+          - 5432:5432
+
+        # Set health checks to wait until Postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v3
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+
+      - name: Install sqlc
+        uses: sqlc-dev/setup-sqlc@v3
+        with:
+          sqlc-version: "1.27.0"
+
+      - name: Install Postgres client
+        run: |
+          sudo apt update
+          sudo apt install -y postgresql-client
+
+      - name: Verify Postgres connection
+        run: PGPASSWORD=${{ env.POSTGRES_PASSWORD }} psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -d ${{ env.POSTGRES_DB }} -c "\l"
+
+      - name: Run database migrations
+        run: |
+          cd ./cmd/migrations
+          go run . up
+
+      - name: Compare existing vs pending generated code
+        run: sqlc diff
+
+      - name: Vet queries
+        run: sqlc vet

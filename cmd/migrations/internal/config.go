@@ -24,7 +24,7 @@ func ParseConfig() *Config {
 
 type DatabaseConfig struct {
 	Host    string `env:"DB_ADDR" envDefault:"localhost"`
-	Port    string `env:"DB_ADDR" envDefault:"5432"`
+	Port    string `env:"DB_PORT" envDefault:"5432"`
 	User    string `env:"DB_USER,required"`
 	Pass    string `env:"DB_PASS,required"`
 	Name    string `env:"DB_NAME,required"`
