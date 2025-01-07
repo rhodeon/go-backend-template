@@ -1,0 +1,46 @@
+name: sqlc
+
+on:
+  push:
+    branches:
+      - '*'
+
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+#  diff:
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - uses: actions/checkout@v3
+#      - uses: sqlc-dev/setup-sqlc@v3
+#        with:
+#          sqlc-version: '1.27.0'
+#      - run: sqlc diff
+
+  vet:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Installs sqlc
+      - uses: actions/checkout@v3
+      - uses: sqlc-dev/setup-sqlc@v3
+        with:
+          sqlc-version: '1.27.0'
+
+      # Starts a PostgreSQL server
+      - uses: sqlc-dev/action-setup-postgres@master
+        id: postgres
+        with:
+          username: ci
+          password: password
+          database: test
+          port: 34837
+          postgres-version: "16"
+
+      # Runs sqlc vet
+      - run: sqlc vet
+        env:
+          POSTGRESQL_SERVER_URI: ${{ steps.postgres.outputs.connection-uri }}?sslmode=disable
