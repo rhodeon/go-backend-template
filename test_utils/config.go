@@ -27,7 +27,7 @@ func parseConfig() (*Config, error) {
 	cfg.Database = &database.Config{
 		Host:     "localhost",
 		Port:     "5432",
-		User:     "airgateway",
+		User:     "user",
 		Pass:     "password",
 		Name:     "agw_test",
 		SslMode:  "disable",
