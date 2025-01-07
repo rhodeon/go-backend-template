@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TEST_POSTGRES_CONTAINER: "docker:io/postgres:16"
+      TEST_POSTGRES_CONTAINER: "postgres:16"
 
     steps:
       - name: Checkout code
