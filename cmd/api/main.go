@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"sync"
+
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/server"

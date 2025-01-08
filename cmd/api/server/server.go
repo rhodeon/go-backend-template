@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"log/slog"
 	"net"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 
 	"github.com/pkg/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"

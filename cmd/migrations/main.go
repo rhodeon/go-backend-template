@@ -4,8 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"os"
+
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rhodeon/go-backend-template/cmd/migrations/internal"

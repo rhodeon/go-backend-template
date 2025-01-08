@@ -3,8 +3,9 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"strings"
+
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 
 	"github.com/jackc/pgx/v5"
 )
