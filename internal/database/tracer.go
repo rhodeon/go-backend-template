@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -11,13 +11,11 @@ import (
 
 // tracer implements the pgx.QueryTracer interface to provider debugging and tracing capabilities for queries.
 type tracer struct {
-	logger    *slog.Logger
 	debugMode bool
 }
 
-func newTracer(logger *slog.Logger, debugMode bool) tracer {
+func newTracer(debugMode bool) tracer {
 	return tracer{
-		logger:    logger,
 		debugMode: debugMode,
 	}
 }
@@ -25,7 +23,7 @@ func newTracer(logger *slog.Logger, debugMode bool) tracer {
 // TraceQueryStart logs each database query triggered when in debug mode.
 // The debugMode is used rather than simply calling the logger.Debug in order to
 // prevent wasting time on formatting the output when not in debug mode.
-func (t tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+func (t tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	if t.debugMode {
 		// Prevent pollution of logs with transaction boundary commands.
 		if strings.EqualFold(data.SQL, "begin") ||
@@ -44,7 +42,7 @@ func (t tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.Tr
 			}
 		}
 
-		t.logger.Info(fmt.Sprintf("Executing db query:\n%s\nargs:%s", data.SQL, render))
+		helpers.ContextGetLogger(ctx).Info(fmt.Sprintf("Executing db query:\n%s\nargs:%s", data.SQL, render))
 	}
 
 	return ctx

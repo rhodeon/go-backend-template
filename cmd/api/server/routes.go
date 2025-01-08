@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -13,7 +14,7 @@ import (
 	api_middleware "github.com/rhodeon/go-backend-template/cmd/api/middleware"
 )
 
-func routes(app *internal.Application) http.Handler {
+func routes(ctx context.Context, app *internal.Application) http.Handler {
 	router := chi.NewMux()
 	router.Use(middleware.Logger)
 
@@ -22,7 +23,7 @@ func routes(app *internal.Application) http.Handler {
 
 	api := humachi.New(router, huma.DefaultConfig("API", "0.1.0"))
 	api.UseMiddleware(
-		api_middleware.Logger(app),
+		api_middleware.Logger(ctx),
 		api_middleware.SetRequestId(app),
 		api_middleware.Timeout(app),
 		api_middleware.Recover(api),

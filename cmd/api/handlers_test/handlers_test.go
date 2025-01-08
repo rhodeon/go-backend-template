@@ -3,7 +3,6 @@ package handlers_test
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -32,18 +31,20 @@ func spawnServer() (*internal.Application, error) {
 		},
 	}
 
+	testContext := context.Background()
+
 	repos := repositories.New()
 	services := services.New(repos)
-	dbPool, err := test_utils.ConnectDb(context.Background())
+	dbPool, err := test_utils.ConnectDb(testContext)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect database")
 	}
 
-	app := internal.NewApplication(config, slog.Default(), dbPool, services)
+	app := internal.NewApplication(config, dbPool, services)
 	listenChan := make(chan int, 1)
 
 	go func() {
-		if err := server.ServeApi(app, &sync.WaitGroup{}, listenChan); err != nil {
+		if err := server.ServeApi(testContext, app, &sync.WaitGroup{}, listenChan); err != nil {
 			panic(err)
 		}
 	}()

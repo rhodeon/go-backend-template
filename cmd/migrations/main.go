@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"os"
 
 	"github.com/jackc/pgx/v5/stdlib"
@@ -59,9 +60,10 @@ func main() {
 
 	cfg := internal.ParseConfig()
 	logger := log.NewLogger(cfg.DebugMode)
+	mainContext := helpers.ContextSetLogger(context.Background(), logger)
 
 	dbConfig := database.Config(cfg.Database)
-	dbPool, err := database.Connect(&dbConfig, logger, cfg.DebugMode)
+	dbPool, err := database.Connect(mainContext, &dbConfig, cfg.DebugMode)
 	if err != nil {
 		panic(err)
 	}

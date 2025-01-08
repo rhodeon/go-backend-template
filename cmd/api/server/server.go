@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"log/slog"
 	"net"
 	"net/http"
@@ -19,9 +20,11 @@ import (
 // ServeApi starts up a server with the app data.
 // listenPort is used to optionally notify the caller that the server is available to accept connections, along with the connected port number.
 // This is useful to guarantee the server is active before proceeding. e.g. for tests.
-func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, listenPort chan<- int) error {
+func ServeApi(ctx context.Context, app *internal.Application, backgroundWaitGroup *sync.WaitGroup, listenPort chan<- int) error {
+	logger := helpers.ContextGetLogger(ctx)
+
 	serverConfig := app.Config.Server
-	router := routes(app)
+	router := routes(ctx, app)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", serverConfig.HttpPort),
@@ -33,7 +36,7 @@ func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, li
 
 	// Start a background goroutine to intercept and handle shutdown events.
 	shutdownError := make(chan error)
-	go handleShutdown(srv, shutdownError, backgroundWaitGroup, app)
+	go handleShutdown(ctx, srv, shutdownError, backgroundWaitGroup, app)
 
 	// Listen and Serve are split into 2 steps here to enable notifying the caller that the
 	// server is listening for connections.
@@ -45,7 +48,7 @@ func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, li
 	listenPort <- listener.Addr().(*net.TCPAddr).Port
 
 	// Now the server can proceed to process connections.
-	app.Logger.Info(
+	logger.Info(
 		"Starting server",
 		slog.String("env", app.Config.Environment),
 		slog.String("port", srv.Addr),
@@ -62,14 +65,16 @@ func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, li
 		return err
 	}
 
-	app.Logger.Info("Stopped server")
+	logger.Info("Stopped server")
 	return nil
 }
 
 // handleShutdown gracefully handles interruption and termination signals,
 // giving ongoing request a 20-second leeway before shutting down the server.
 // It should be run as a background goroutine.
-func handleShutdown(server *http.Server, shutdownErr chan error, backgroundWg *sync.WaitGroup, app *internal.Application) {
+func handleShutdown(ctx context.Context, server *http.Server, shutdownErr chan error, backgroundWg *sync.WaitGroup, app *internal.Application) {
+	logger := helpers.ContextGetLogger(ctx)
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
@@ -77,10 +82,10 @@ func handleShutdown(server *http.Server, shutdownErr chan error, backgroundWg *s
 	s := <-quit
 
 	// 20-second timeout context to delay shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), app.Config.Server.ShutdownTimeout)
+	ctx, cancel := context.WithTimeout(ctx, app.Config.Server.ShutdownTimeout)
 	defer cancel()
 
-	app.Logger.Info("Shutting down server", slog.String(log.AttrSignal, s.String()))
+	logger.Info("Shutting down server", slog.String(log.AttrSignal, s.String()))
 
 	// Shut down the server and update the error channel  to resume execution on the main goroutine.
 	err := server.Shutdown(ctx)
@@ -89,7 +94,7 @@ func handleShutdown(server *http.Server, shutdownErr chan error, backgroundWg *s
 	}
 
 	// Wait for background tasks to complete before shutting down the application
-	app.Logger.Info("Completing background tasks...")
+	logger.Info("Completing background tasks...")
 	backgroundWg.Wait()
 	shutdownErr <- nil
 }

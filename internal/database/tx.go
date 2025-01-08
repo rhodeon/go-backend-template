@@ -25,6 +25,6 @@ func BeginTransaction(ctx context.Context, dbPool *pgxpool.Pool) (pgx.Tx, func(c
 // It is safe to call after commits and should always be deferred when creating a transaction
 func ResolveTransactionWithRollback(ctx context.Context, tx pgx.Tx) {
 	if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-		helpers.GetContextLogger(ctx).ErrorContext(ctx, "Error resolving database transaction connection", slog.Any(log.AttrError, err))
+		helpers.ContextGetLogger(ctx).ErrorContext(ctx, "Error resolving database transaction connection", slog.Any(log.AttrError, err))
 	}
 }
