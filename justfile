@@ -40,12 +40,13 @@ test:
 
 # Formats the codebase uniformly and vendors dependencies.
 tidy:
-    @echo "formatting codebase..."
-    @golangci-lint run --fix --enable-only gofmt,gofumpt
-
     @echo "tidying dependencies..."
     go mod tidy -v
     go mod vendor
+
+    @echo "formatting codebase..."
+    @golangci-lint run --fix --enable-only gofmt,gofumpt
+
 
 # Runs lint checks.
 lint:
