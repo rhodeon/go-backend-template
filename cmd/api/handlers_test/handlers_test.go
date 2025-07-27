@@ -11,7 +11,7 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/server"
 	"github.com/rhodeon/go-backend-template/domain/services"
 	"github.com/rhodeon/go-backend-template/repositories"
-	"github.com/rhodeon/go-backend-template/testutils"
+	"github.com/rhodeon/go-backend-template/utils/testutils"
 
 	"github.com/pkg/errors"
 )

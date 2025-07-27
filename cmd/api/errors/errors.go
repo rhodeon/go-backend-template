@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"github.com/rhodeon/go-backend-template/internal/log"
+	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
@@ -64,7 +64,7 @@ func NewApiError() func(int, string, ...error) huma.StatusError {
 // Such an error could be a generic internal server error, a cancelled session, or could be due to the request timeout being exceeded.
 // A 504 Gateway Timeout (server timeout) is returned in the latter case.
 func HandleUntypedError(ctx context.Context, err error) error {
-	logger := helpers.ContextGetLogger(ctx)
+	logger := contextutils.GetLogger(ctx)
 
 	switch {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rhodeon/go-backend-template/internal/helpers"
+	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -46,7 +46,7 @@ func (t tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.Trace
 
 		// sloglint is disabled here because of the `static-msg` rule.
 		// The queries and arguments are dynamic and aren't set as log attributes as newlines in them are not rendered.
-		helpers.ContextGetLogger(ctx).Debug(fmt.Sprintf("Executing db query:\n%s\nargs:%s", data.SQL, formattedArgs)) //nolint: sloglint
+		contextutils.GetLogger(ctx).Debug(fmt.Sprintf("Executing db query:\n%s\nargs:%s", data.SQL, formattedArgs)) //nolint: sloglint
 	}
 
 	return ctx
