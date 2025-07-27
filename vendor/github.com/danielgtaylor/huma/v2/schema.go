@@ -442,11 +442,27 @@ func convertType(fieldName string, t reflect.Type, v any) any {
 			// the original to the new type.
 			tmp := reflect.MakeSlice(t, 0, vv.Len())
 			for i := 0; i < vv.Len(); i++ {
-				if !vv.Index(i).Elem().Type().ConvertibleTo(t.Elem()) {
-					panic(fmt.Errorf("unable to convert %v to %v for field '%s': %w", vv.Index(i).Interface(), t.Elem(), fieldName, ErrSchemaInvalid))
+				item := vv.Index(i)
+				if item.Kind() == reflect.Interface {
+					// E.g. []any and we want the underlying type.
+					item = item.Elem()
+				}
+				item = reflect.Indirect(item)
+				typ := deref(t.Elem())
+				if !item.Type().ConvertibleTo(typ) {
+					panic(fmt.Errorf("unable to convert %v to %v for field '%s': %w", item.Interface(), t.Elem(), fieldName, ErrSchemaInvalid))
 				}
 
-				tmp = reflect.Append(tmp, vv.Index(i).Elem().Convert(t.Elem()))
+				value := item.Convert(typ)
+				if t.Elem().Kind() == reflect.Ptr {
+					// Special case: if the field is a pointer, we need to get a pointer
+					// to the converted value.
+					ptr := reflect.New(value.Type())
+					ptr.Elem().Set(value)
+					value = ptr
+				}
+
+				tmp = reflect.Append(tmp, value)
 			}
 			v = tmp.Interface()
 		} else if !tv.ConvertibleTo(deref(t)) {
@@ -542,7 +558,7 @@ func SchemaFromField(registry Registry, f reflect.StructField, hint string) *Sch
 		fs.Default = defaultValue
 	}
 
-	if value := f.Tag.Get("example"); value != "" {
+	if value, ok := f.Tag.Lookup("example"); ok {
 		if e := jsonTagValue(registry, f.Name, fs, value); e != nil {
 			fs.Examples = []any{e}
 		}
@@ -800,8 +816,9 @@ func schemaFromType(r Registry, t reflect.Type) *Schema {
 			fieldSet[f.Name] = struct{}{}
 
 			// Controls whether the field is required or not. All fields start as
-			// required, then can be made optional with the `omitempty` JSON tag or it
-			// can be overridden manually via the `required` tag.
+			// required, then can be made optional with the `omitempty` JSON tag,
+			// `omitzero` JSON tag, or it can be overridden manually via the
+			// `required` tag.
 			fieldRequired := true
 
 			name := f.Name
@@ -810,6 +827,9 @@ func schemaFromType(r Registry, t reflect.Type) *Schema {
 					name = n
 				}
 				if strings.Contains(j, "omitempty") {
+					fieldRequired = false
+				}
+				if strings.Contains(j, "omitzero") {
 					fieldRequired = false
 				}
 			}

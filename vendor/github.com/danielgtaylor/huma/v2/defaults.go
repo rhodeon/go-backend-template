@@ -15,7 +15,9 @@ import (
 //	}
 var DefaultJSONFormat = Format{
 	Marshal: func(w io.Writer, v any) error {
-		return json.NewEncoder(w).Encode(v)
+		enc := json.NewEncoder(w)
+		enc.SetEscapeHTML(false)
+		return enc.Encode(v)
 	},
 	Unmarshal: json.Unmarshal,
 }
@@ -79,7 +81,7 @@ func DefaultConfig(title, version string) Config {
 				// Schema that describes the response structure.
 				// This is a create hook so we get the latest schema path setting.
 				linkTransformer := NewSchemaLinkTransformer(schemaPrefix, c.SchemasPath)
-				c.OpenAPI.OnAddOperation = append(c.OpenAPI.OnAddOperation, linkTransformer.OnAddOperation)
+				c.OnAddOperation = append(c.OnAddOperation, linkTransformer.OnAddOperation)
 				c.Transformers = append(c.Transformers, linkTransformer.Transform)
 				return c
 			},

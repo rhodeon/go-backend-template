@@ -863,7 +863,8 @@ type Operation struct {
 	// This is a convenience for handlers that return a fixed set of errors
 	// where you do not wish to provide each one as an OpenAPI response object.
 	// Each error specified here is expanded into a response object with the
-	// schema generated from the type returned by `huma.NewError()`.
+	// schema generated from the type returned by `huma.NewError()`
+	// or `huma.NewErrorWithContext`.
 	Errors []int `yaml:"-"`
 
 	// SkipValidateParams disables validation of path, query, and header
@@ -937,8 +938,24 @@ type Operation struct {
 	// Callbacks is a map of possible out-of band callbacks related to the parent
 	// operation. The key is a unique identifier for the Callback Object. Each
 	// value in the map is a Callback Object that describes a request that may be
-	// initiated by the API provider and the expected responses.
-	Callbacks map[string]*PathItem `yaml:"callbacks,omitempty"`
+	// initiated by the API provider and the expected responses. The Callback
+	// Object consists of a map of possible request URL expressions to PathItem
+	// objects describing the request.
+	//
+	// 	callbacks:
+	// 	  myName:
+	// 	    '{$request.body#/url}':
+	// 	      post:
+	// 	        requestBody:
+	// 	          description: callback payload
+	// 	          content:
+	// 	            application/json:
+	// 	              schema:
+	// 	                $ref: '#/components/schemas/SomePayload'
+	// 	        responses:
+	// 	          '200':
+	// 	            description: callback response
+	Callbacks map[string]map[string]*PathItem `yaml:"callbacks,omitempty"`
 
 	// Deprecated declares this operation to be deprecated. Consumers SHOULD
 	// refrain from usage of the declared operation. Default value is false.
@@ -1198,6 +1215,7 @@ type SecurityScheme struct {
 	// Scheme is REQUIRED. The name of the HTTP Authorization scheme to be used in
 	// the Authorization header as defined in [RFC7235]. The values used SHOULD be
 	// registered in the IANA Authentication Scheme registry.
+	// See: http://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml
 	Scheme string `yaml:"scheme,omitempty"`
 
 	// BearerFormat is a hint to the client to identify how the bearer token is

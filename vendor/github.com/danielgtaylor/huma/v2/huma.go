@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/url"
@@ -81,6 +82,8 @@ type StreamResponse struct {
 	Body func(ctx Context)
 }
 
+const styleDeepObject = "deepObject"
+
 type paramFieldInfo struct {
 	Type       reflect.Type
 	Name       string
@@ -89,6 +92,7 @@ type paramFieldInfo struct {
 	Default    string
 	TimeFormat string
 	Explode    bool
+	Style      string
 	Schema     *Schema
 }
 
@@ -97,9 +101,12 @@ func findParams(registry Registry, op *Operation, t reflect.Type) *findResult[*p
 		if f.Anonymous {
 			return nil
 		}
-
 		pfi := &paramFieldInfo{
 			Type: f.Type,
+		}
+
+		if reflect.PointerTo(f.Type).Implements(reflect.TypeFor[ParamWrapper]()) {
+			pfi.Type = reflect.New(f.Type).Interface().(ParamWrapper).Receiver().Type()
 		}
 
 		if def := f.Tag.Get("default"); def != "" {
@@ -121,10 +128,16 @@ func findParams(registry Registry, op *Operation, t reflect.Type) *findResult[*p
 			if slices.Contains(split[1:], "explode") {
 				pfi.Explode = true
 			}
+			if slices.Contains(split[1:], styleDeepObject) {
+				pfi.Style = styleDeepObject
+			}
 			explode = &pfi.Explode
 		} else if h := f.Tag.Get("header"); h != "" {
 			pfi.Loc = "header"
 			name = h
+		} else if fo := f.Tag.Get("form"); fo != "" {
+			pfi.Loc = "form"
+			name = fo
 		} else if c := f.Tag.Get("cookie"); c != "" {
 			pfi.Loc = "cookie"
 			name = c
@@ -150,8 +163,8 @@ func findParams(registry Registry, op *Operation, t reflect.Type) *findResult[*p
 		pfi.Schema = SchemaFromField(registry, f, "")
 
 		var example any
-		if e := f.Tag.Get("example"); e != "" {
-			example = jsonTagValue(registry, f.Type.Name(), pfi.Schema, f.Tag.Get("example"))
+		if value, ok := f.Tag.Lookup("example"); ok {
+			example = jsonTagValue(registry, f.Type.Name(), pfi.Schema, value)
 		}
 		if example == nil && len(pfi.Schema.Examples) > 0 {
 			example = pfi.Schema.Examples[0]
@@ -192,6 +205,7 @@ func findParams(registry Registry, op *Operation, t reflect.Type) *findResult[*p
 				Required:    pfi.Required,
 				Schema:      pfi.Schema,
 				Example:     example,
+				Style:       pfi.Style,
 			})
 		}
 
@@ -212,8 +226,8 @@ func findResolvers(resolverType, t reflect.Type) *findResult[bool] {
 func findDefaults(registry Registry, t reflect.Type) *findResult[any] {
 	return findInType(t, nil, func(sf reflect.StructField, i []int) any {
 		if d := sf.Tag.Get("default"); d != "" {
-			if sf.Type.Kind() == reflect.Pointer {
-				panic("pointers cannot have default values")
+			if sf.Type.Kind() == reflect.Pointer && sf.Type.Elem().Kind() == reflect.Struct {
+				panic("pointers to structs cannot have default values")
 			}
 			s := registry.Schema(sf.Type, true, "")
 			return convertType(sf.Type.Name(), sf.Type, jsonTagValue(registry, sf.Name, s, d))
@@ -230,6 +244,11 @@ type headerInfo struct {
 
 func findHeaders(t reflect.Type) *findResult[*headerInfo] {
 	return findInType(t, nil, func(sf reflect.StructField, i []int) *headerInfo {
+		// Ignore embedded fields
+		if sf.Anonymous {
+			return nil
+		}
+
 		header := sf.Tag.Get("header")
 		if header == "" {
 			header = sf.Name
@@ -255,27 +274,28 @@ type findResult[T comparable] struct {
 }
 
 func (r *findResult[T]) every(current reflect.Value, path []int, v T, f func(reflect.Value, T)) {
-	if current.Kind() == reflect.Invalid {
-		// Indirect from below may have resulted in no value, for example
-		// an optional field may have been omitted; just ignore it.
-		return
-	}
-
 	if len(path) == 0 {
 		f(current, v)
 		return
 	}
 
+	current = reflect.Indirect(current)
+	if current.Kind() == reflect.Invalid {
+		// Indirect may have resulted in no value, for example an optional field
+		// that's a pointer may have been omitted; just ignore it.
+		return
+	}
+
 	switch current.Kind() {
 	case reflect.Struct:
-		r.every(reflect.Indirect(current.Field(path[0])), path[1:], v, f)
+		r.every(current.Field(path[0]), path[1:], v, f)
 	case reflect.Slice:
 		for j := 0; j < current.Len(); j++ {
-			r.every(reflect.Indirect(current.Index(j)), path, v, f)
+			r.every(current.Index(j), path, v, f)
 		}
 	case reflect.Map:
 		for _, k := range current.MapKeys() {
-			r.every(reflect.Indirect(current.MapIndex(k)), path, v, f)
+			r.every(current.MapIndex(k), path, v, f)
 		}
 	default:
 		panic("unsupported")
@@ -297,17 +317,25 @@ func jsonName(field reflect.StructField) string {
 }
 
 func (r *findResult[T]) everyPB(current reflect.Value, path []int, pb *PathBuffer, v T, f func(reflect.Value, T)) {
-	if current.Kind() == reflect.Invalid {
-		// Indirect from below may have resulted in no value, for example
-		// an optional field may have been omitted; just ignore it.
-		return
-	}
-	switch current.Kind() {
-	case reflect.Struct:
+	switch reflect.Indirect(current).Kind() {
+	case reflect.Slice, reflect.Map:
+		// Ignore these. We only care about the leaf nodes.
+	default:
 		if len(path) == 0 {
 			f(current, v)
 			return
 		}
+	}
+
+	current = reflect.Indirect(current)
+	if current.Kind() == reflect.Invalid {
+		// Indirect may have resulted in no value, for example an optional field may
+		// have been omitted; just ignore it.
+		return
+	}
+
+	switch current.Kind() {
+	case reflect.Struct:
 		field := current.Type().Field(path[0])
 		pops := 0
 		if !field.Anonymous {
@@ -334,14 +362,14 @@ func (r *findResult[T]) everyPB(current reflect.Value, path []int, pb *PathBuffe
 				pb.Push(jsonName(field))
 			}
 		}
-		r.everyPB(reflect.Indirect(current.Field(path[0])), path[1:], pb, v, f)
+		r.everyPB(current.Field(path[0]), path[1:], pb, v, f)
 		for i := 0; i < pops; i++ {
 			pb.Pop()
 		}
 	case reflect.Slice:
 		for j := 0; j < current.Len(); j++ {
 			pb.PushIndex(j)
-			r.everyPB(reflect.Indirect(current.Index(j)), path, pb, v, f)
+			r.everyPB(current.Index(j), path, pb, v, f)
 			pb.Pop()
 		}
 	case reflect.Map:
@@ -351,14 +379,10 @@ func (r *findResult[T]) everyPB(current reflect.Value, path []int, pb *PathBuffe
 			} else {
 				pb.Push(fmt.Sprintf("%v", k.Interface()))
 			}
-			r.everyPB(reflect.Indirect(current.MapIndex(k)), path, pb, v, f)
+			r.everyPB(current.MapIndex(k), path, pb, v, f)
 			pb.Pop()
 		}
 	default:
-		if len(path) == 0 {
-			f(current, v)
-			return
-		}
 		panic("unsupported")
 	}
 }
@@ -397,7 +421,6 @@ func _findInType[T comparable](t reflect.Type, path []int, result *findResult[T]
 		if _, ok := visited[t]; ok {
 			return
 		}
-		visited[t] = struct{}{}
 		for i := 0; i < t.NumField(); i++ {
 			f := t.Field(i)
 			if !f.IsExported() {
@@ -420,7 +443,9 @@ func _findInType[T comparable](t reflect.Type, path []int, result *findResult[T]
 				// Always process embedded structs and named fields which are not
 				// structs. If `recurseFields` is true then we also process named
 				// struct fields recursively.
+				visited[t] = struct{}{}
 				_findInType(f.Type, fi, result, onType, onField, recurseFields, visited, ignore...)
+				delete(visited, t)
 			}
 		}
 	case reflect.Slice:
@@ -458,9 +483,46 @@ var bufPool = sync.Pool{
 	},
 }
 
+func writeResponse(api API, ctx Context, status int, ct string, body any) error {
+	if ct == "" {
+		// If no content type was provided, try to negotiate one with the client.
+		var err error
+		ct, err = api.Negotiate(ctx.Header("Accept"))
+		if err != nil {
+			notAccept := NewErrorWithContext(ctx, http.StatusNotAcceptable, "unable to marshal response", err)
+			ct := "application/json"
+			if ctf, ok := notAccept.(ContentTypeFilter); ok {
+				ct = ctf.ContentType(ct)
+			}
+			ctx.SetHeader("Content-Type", ct)
+			if e := transformAndWrite(api, ctx, http.StatusNotAcceptable, "application/json", notAccept); e != nil {
+				return e
+			}
+			return err
+		}
+
+		if ctf, ok := body.(ContentTypeFilter); ok {
+			ct = ctf.ContentType(ct)
+		}
+
+		ctx.SetHeader("Content-Type", ct)
+	}
+
+	if err := transformAndWrite(api, ctx, status, ct, body); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeResponseWithPanic(api API, ctx Context, status int, ct string, body any) {
+	if err := writeResponse(api, ctx, status, ct, body); err != nil {
+		panic(err)
+	}
+}
+
 // transformAndWrite is a utility function to transform and write a response.
 // It is best-effort as the status code and headers may have already been sent.
-func transformAndWrite(api API, ctx Context, status int, ct string, body any) {
+func transformAndWrite(api API, ctx Context, status int, ct string, body any) error {
 	// Try to transform and then marshal/write the response.
 	// Status code was already sent, so just log the error if something fails,
 	// and do our best to stuff it into the body of the response.
@@ -469,17 +531,26 @@ func transformAndWrite(api API, ctx Context, status int, ct string, body any) {
 		ctx.BodyWriter().Write([]byte("error transforming response"))
 		// When including tval in the panic message, the server may become unresponsive for some time if the value is very large
 		// therefore, it has been removed from the panic message
-		panic(fmt.Errorf("error transforming response for %s %s %d: %w\n", ctx.Operation().Method, ctx.Operation().Path, status, terr))
+		return fmt.Errorf("error transforming response for %s %s %d: %w", ctx.Operation().Method, ctx.Operation().Path, status, terr)
 	}
 	ctx.SetStatus(status)
 	if status != http.StatusNoContent && status != http.StatusNotModified {
 		if merr := api.Marshal(ctx.BodyWriter(), ct, tval); merr != nil {
+			if errors.Is(ctx.Context().Err(), context.Canceled) {
+				// The client disconnected, so don't bother writing anything. Attempt
+				// to set the status in case it'll get logged. Technically this was
+				// not a normal successful request.
+				ctx.SetStatus(499)
+				return nil
+			}
 			ctx.BodyWriter().Write([]byte("error marshaling response"))
 			// When including tval in the panic message, the server may become unresponsive for some time if the value is very large
 			// therefore, it has been removed from the panic message
-			panic(fmt.Errorf("error marshaling response for %s %s %d: %w\n", ctx.Operation().Method, ctx.Operation().Path, status, merr))
+			return fmt.Errorf("error marshaling response for %s %s %d: %w", ctx.Operation().Method, ctx.Operation().Path, status, merr)
 		}
 	}
+
+	return nil
 }
 
 func parseArrElement[T any](values []string, parse func(string) (T, error)) ([]T, error) {
@@ -557,287 +628,48 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 	oapi := api.OpenAPI()
 	registry := oapi.Components.Schemas
 
-	if op.Method == "" || op.Path == "" {
-		panic("method and path must be specified in operation")
+	if op.Method == "" {
+		panic("method must be specified in operation")
 	}
+	if op.Path == "" {
+		if grp, ok := api.(*Group); !ok || len(grp.prefixes) == 0 {
+			panic("path must be specified in operation")
+		}
+	}
+	initResponses(&op)
 
 	inputType := reflect.TypeOf((*I)(nil)).Elem()
 	if inputType.Kind() != reflect.Struct {
 		panic("input must be a struct")
 	}
-	inputParams := findParams(registry, &op, inputType)
-	inputBodyIndex := make([]int, 0)
-	hasInputBody := false
-	if f, ok := inputType.FieldByName("Body"); ok {
-		hasInputBody = true
-		inputBodyIndex = f.Index
-		if op.RequestBody == nil {
-			op.RequestBody = &RequestBody{}
-		}
+	inputParams, inputBodyIndex, hasInputBody, rawBodyIndex, rbt, inSchema := processInputType(inputType, &op, registry)
 
-		required := f.Type.Kind() != reflect.Ptr && f.Type.Kind() != reflect.Interface
-		if f.Tag.Get("required") == "true" {
-			required = true
-		}
-
-		contentType := "application/json"
-		if c := f.Tag.Get("contentType"); c != "" {
-			contentType = c
-		}
-		hint := getHint(inputType, f.Name, op.OperationID+"Request")
-		if nameHint := f.Tag.Get("nameHint"); nameHint != "" {
-			hint = nameHint
-		}
-		s := SchemaFromField(registry, f, hint)
-
-		op.RequestBody.Required = required
-
-		if op.RequestBody.Content == nil {
-			op.RequestBody.Content = map[string]*MediaType{}
-		}
-		op.RequestBody.Content[contentType] = &MediaType{Schema: s}
-
-		if op.BodyReadTimeout == 0 {
-			// 5 second default
-			op.BodyReadTimeout = 5 * time.Second
-		}
-
-		if op.MaxBodyBytes == 0 {
-			// 1 MB default
-			op.MaxBodyBytes = 1024 * 1024
-		}
-	}
-	rawBodyIndex := -1
-	rawBodyMultipart := false
-	rawBodyDecodedMultipart := false
-	if f, ok := inputType.FieldByName("RawBody"); ok {
-		rawBodyIndex = f.Index[0]
-		if op.RequestBody == nil {
-			op.RequestBody = &RequestBody{
-				Required: true,
-			}
-		}
-
-		if op.RequestBody.Content == nil {
-			op.RequestBody.Content = map[string]*MediaType{}
-		}
-
-		contentType := "application/octet-stream"
-
-		if f.Type.String() == "multipart.Form" {
-			contentType = "multipart/form-data"
-			rawBodyMultipart = true
-		}
-		if strings.HasPrefix(f.Type.Name(), "MultipartFormFiles") {
-			contentType = "multipart/form-data"
-			rawBodyDecodedMultipart = true
-		}
-
-		if c := f.Tag.Get("contentType"); c != "" {
-			contentType = c
-		}
-
-		switch contentType {
-		case "multipart/form-data":
-			if op.RequestBody.Content["multipart/form-data"] != nil {
-				break
-			}
-			if rawBodyMultipart {
-				op.RequestBody.Content["multipart/form-data"] = &MediaType{
-					Schema: &Schema{
-						Type: "object",
-						Properties: map[string]*Schema{
-							"name": {
-								Type:        "string",
-								Description: "general purpose name for multipart form value",
-							},
-							"filename": {
-								Type:        "string",
-								Format:      "binary",
-								Description: "filename of the file being uploaded",
-							},
-						},
-					},
-				}
-			}
-			if rawBodyDecodedMultipart {
-				dataField, ok := f.Type.FieldByName("data")
-				if !ok {
-					panic("Expected type MultipartFormFiles[T] to have a 'data *T' generic pointer field")
-				}
-				op.RequestBody.Content["multipart/form-data"] = &MediaType{
-					Schema:   multiPartFormFileSchema(dataField.Type.Elem()),
-					Encoding: multiPartContentEncoding(dataField.Type.Elem()),
-				}
-				op.RequestBody.Required = false
-			}
-		default:
-			op.RequestBody.Content[contentType] = &MediaType{
-				Schema: &Schema{
-					Type:   "string",
-					Format: "binary",
-				},
-			}
-		}
-	}
-
-	if op.RequestBody != nil {
-		for _, mediatype := range op.RequestBody.Content {
-			if mediatype.Schema != nil {
-				// Ensure all schema validation errors are set up properly as some
-				// parts of the schema may have been user-supplied.
-				mediatype.Schema.PrecomputeMessages()
-			}
-		}
-	}
-
-	var inSchema *Schema
-	if op.RequestBody != nil && op.RequestBody.Content != nil && op.RequestBody.Content["application/json"] != nil && op.RequestBody.Content["application/json"].Schema != nil {
-		hasInputBody = true
-		inSchema = op.RequestBody.Content["application/json"].Schema
-	}
-
-	resolvers := findResolvers(resolverType, inputType)
-	defaults := findDefaults(registry, inputType)
-
-	if op.Responses == nil {
-		op.Responses = map[string]*Response{}
-	}
 	outputType := reflect.TypeOf((*O)(nil)).Elem()
 	if outputType.Kind() != reflect.Struct {
 		panic("output must be a struct")
 	}
+	outHeaders, outStatusIndex, outBodyIndex, outBodyFunc := processOutputType(outputType, &op, registry)
 
-	outStatusIndex := -1
-	if f, ok := outputType.FieldByName("Status"); ok {
-		outStatusIndex = f.Index[0]
-		if f.Type.Kind() != reflect.Int {
-			panic("status field must be an int")
-		}
-		// TODO: enum tag?
-		// TODO: register each of the possible responses with the right model
-		//       and headers down below.
-	}
-	outHeaders := findHeaders(outputType)
-	outBodyIndex := -1
-	outBodyFunc := false
-	if f, ok := outputType.FieldByName("Body"); ok {
-		outBodyIndex = f.Index[0]
-		if f.Type.Kind() == reflect.Func {
-			outBodyFunc = true
-
-			if f.Type != bodyCallbackType {
-				panic("body field must be a function with signature func(huma.Context)")
-			}
-		}
-		status := op.DefaultStatus
-		if status == 0 {
-			status = http.StatusOK
-		}
-		statusStr := strconv.Itoa(status)
-		if op.Responses[statusStr] == nil {
-			op.Responses[statusStr] = &Response{}
-		}
-		if op.Responses[statusStr].Description == "" {
-			op.Responses[statusStr].Description = http.StatusText(status)
-		}
-		if op.Responses[statusStr].Headers == nil {
-			op.Responses[statusStr].Headers = map[string]*Param{}
-		}
-		if !outBodyFunc {
-			hint := getHint(outputType, f.Name, op.OperationID+"Response")
-			if nameHint := f.Tag.Get("nameHint"); nameHint != "" {
-				hint = nameHint
-			}
-			outSchema := SchemaFromField(registry, f, hint)
-			if op.Responses[statusStr].Content == nil {
-				op.Responses[statusStr].Content = map[string]*MediaType{}
-			}
-			if len(op.Responses[statusStr].Content) == 0 {
-				op.Responses[statusStr].Content["application/json"] = &MediaType{}
-			}
-			if op.Responses[statusStr].Content["application/json"] != nil && op.Responses[statusStr].Content["application/json"].Schema == nil {
-				op.Responses[statusStr].Content["application/json"].Schema = outSchema
-			}
-		}
-	}
-	if op.DefaultStatus == 0 {
-		if outBodyIndex != -1 {
-			op.DefaultStatus = http.StatusOK
-		} else {
-			op.DefaultStatus = http.StatusNoContent
-		}
-	}
-	defaultStatusStr := strconv.Itoa(op.DefaultStatus)
-	if op.Responses[defaultStatusStr] == nil {
-		op.Responses[defaultStatusStr] = &Response{
-			Description: http.StatusText(op.DefaultStatus),
-		}
-	}
-	for _, entry := range outHeaders.Paths {
-		// Document the header's name and type.
-		if op.Responses[defaultStatusStr].Headers == nil {
-			op.Responses[defaultStatusStr].Headers = map[string]*Param{}
-		}
-		v := entry.Value
-		f := v.Field
-		if f.Type.Kind() == reflect.Slice {
-			f.Type = deref(f.Type.Elem())
-		}
-		if reflect.PointerTo(f.Type).Implements(fmtStringerType) {
-			// Special case: this field will be written as a string by calling
-			// `.String()` on the value.
-			f.Type = stringType
-		}
-		op.Responses[defaultStatusStr].Headers[v.Name] = &Header{
-			// We need to generate the schema from the field to get validation info
-			// like min/max and enums. Useful to let the client know possible values.
-			Schema: SchemaFromField(registry, f, getHint(outputType, f.Name, op.OperationID+defaultStatusStr+v.Name)),
-		}
-	}
-
-	if len(op.Errors) > 0 && (len(inputParams.Paths) > 0 || hasInputBody) {
-		op.Errors = append(op.Errors, http.StatusUnprocessableEntity)
-	}
 	if len(op.Errors) > 0 {
+		if len(inputParams.Paths) > 0 || hasInputBody {
+			op.Errors = append(op.Errors, http.StatusUnprocessableEntity)
+		}
 		op.Errors = append(op.Errors, http.StatusInternalServerError)
 	}
+	defineErrors(&op, registry)
 
-	exampleErr := NewError(0, "")
-	errContentType := "application/json"
-	if ctf, ok := exampleErr.(ContentTypeFilter); ok {
-		errContentType = ctf.ContentType(errContentType)
-	}
-	errType := deref(reflect.TypeOf(exampleErr))
-	errSchema := registry.Schema(errType, true, getHint(errType, "", "Error"))
-	for _, code := range op.Errors {
-		op.Responses[strconv.Itoa(code)] = &Response{
-			Description: http.StatusText(code),
-			Content: map[string]*MediaType{
-				errContentType: {
-					Schema: errSchema,
-				},
-			},
-		}
-	}
-	if len(op.Responses) <= 1 && len(op.Errors) == 0 {
-		// No errors are defined, so set a default response.
-		op.Responses["default"] = &Response{
-			Description: "Error",
-			Content: map[string]*MediaType{
-				errContentType: {
-					Schema: errSchema,
-				},
-			},
+	if documenter, ok := api.(OperationDocumenter); ok {
+		// Enables customization of OpenAPI documentation behavior for operations.
+		documenter.DocumentOperation(&op)
+	} else {
+		if !op.Hidden {
+			oapi.AddOperation(&op)
 		}
 	}
 
-	if !op.Hidden {
-		oapi.AddOperation(&op)
-	}
-
+	resolvers := findResolvers(resolverType, inputType)
+	defaults := findDefaults(registry, inputType)
 	a := api.Adapter()
-
 	a.Handle(&op, api.Middlewares().Handler(op.Middlewares.Handler(func(ctx Context) {
 		var input I
 
@@ -857,15 +689,16 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 
 		v := reflect.ValueOf(&input).Elem()
 		inputParams.Every(v, func(f reflect.Value, p *paramFieldInfo) {
-			var value string
-			switch p.Loc {
-			case "path":
-				value = ctx.Param(p.Name)
-			case "query":
-				value = ctx.Query(p.Name)
-			case "header":
-				value = ctx.Header(p.Name)
-			case "cookie":
+			f = reflect.Indirect(f)
+			if f.Kind() == reflect.Invalid {
+				return
+			}
+
+			pb.Reset()
+			pb.Push(p.Loc)
+			pb.Push(p.Name)
+
+			if p.Loc == "cookie" {
 				if cookies == nil {
 					// Only parse the cookie headers once, on-demand.
 					cookies = map[string]*http.Cookie{}
@@ -873,308 +706,65 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 						cookies[c.Name] = c
 					}
 				}
-				if c, ok := cookies[p.Name]; ok {
+				if c, ok := cookies[p.Name]; ok && f.Type() == cookieType {
 					// Special case: http.Cookie type, meaning we want the entire parsed
 					// cookie struct, not just the value.
-					if f.Type() == cookieType {
-						f.Set(reflect.ValueOf(cookies[p.Name]).Elem())
-						return
-					}
-
-					value = c.Value
+					f.Set(reflect.ValueOf(c).Elem())
+					return
 				}
 			}
 
-			pb.Reset()
-			pb.Push(p.Loc)
-			pb.Push(p.Name)
-
-			if value == "" && p.Default != "" {
-				value = p.Default
+			var receiver = f
+			if f.Addr().Type().Implements(reflect.TypeFor[ParamWrapper]()) {
+				receiver = f.Addr().Interface().(ParamWrapper).Receiver()
 			}
 
-			if !op.SkipValidateParams && p.Required && value == "" {
-				// Path params are always required.
-				res.Add(pb, "", "required "+p.Loc+" parameter is missing")
-				return
+			var pv any
+			var isSet bool
+			if p.Loc == "query" && p.Style == styleDeepObject {
+				// Deep object style is a special case where we need to parse the
+				// query parameter into a struct. We do this by parsing the query
+				// parameter into a map, then iterating over the map and setting
+				// the fields on the struct.
+				u := ctx.URL()
+				value := parseDeepObjectQuery(u.Query(), p.Name)
+				isSet = len(value) > 0
+				if len(value) == 0 {
+					if !op.SkipValidateParams && p.Required {
+						res.Add(pb, "", "required "+p.Loc+" parameter is missing")
+					}
+					return
+				}
+				pv = setDeepObjectValue(pb, res, receiver, value)
+			} else {
+				value := getParamValue(*p, ctx, cookies)
+				isSet = value != ""
+				if value == "" {
+					if !op.SkipValidateParams && p.Required {
+						// Path params are always required.
+						res.Add(pb, "", "required "+p.Loc+" parameter is missing")
+					}
+					return
+				}
+				var err error
+				pv, err = parseInto(ctx, receiver, value, nil, *p)
+				if err != nil {
+					res.Add(pb, value, err.Error())
+					return
+				}
 			}
 
-			if value != "" {
-				var pv any
+			if f.Addr().Type().Implements(reflect.TypeFor[ParamReactor]()) {
+				f.Addr().Interface().(ParamReactor).OnParamSet(isSet, pv)
+			}
 
-				switch p.Type.Kind() {
-				case reflect.String:
-					f.SetString(value)
-					pv = value
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					v, err := strconv.ParseInt(value, 10, 64)
-					if err != nil {
-						res.Add(pb, value, "invalid integer")
-						return
-					}
-					f.SetInt(v)
-					pv = v
-				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-					v, err := strconv.ParseUint(value, 10, 64)
-					if err != nil {
-						res.Add(pb, value, "invalid integer")
-						return
-					}
-					f.SetUint(v)
-					pv = v
-				case reflect.Float32, reflect.Float64:
-					v, err := strconv.ParseFloat(value, 64)
-					if err != nil {
-						res.Add(pb, value, "invalid float")
-						return
-					}
-					f.SetFloat(v)
-					pv = v
-				case reflect.Bool:
-					v, err := strconv.ParseBool(value)
-					if err != nil {
-						res.Add(pb, value, "invalid boolean")
-						return
-					}
-					f.SetBool(v)
-					pv = v
-				default:
-					if f.Type().Kind() == reflect.Slice {
-						var values []string
-						if p.Explode {
-							u := ctx.URL()
-							values = (&u).Query()[p.Name]
-						} else {
-							values = strings.Split(value, ",")
-						}
-						switch f.Type().Elem().Kind() {
-
-						case reflect.String:
-							if f.Type() == reflect.TypeOf(values) {
-								f.Set(reflect.ValueOf(values))
-							} else {
-								//Change element type to support slice of string subtypes (enums)
-								enumValues := reflect.New(f.Type()).Elem()
-								for _, val := range values {
-									enumVal := reflect.New(f.Type().Elem()).Elem()
-									enumVal.SetString(val)
-									enumValues.Set(reflect.Append(enumValues, enumVal))
-								}
-								f.Set(enumValues)
-							}
-							pv = values
-
-						case reflect.Int:
-							vs, err := parseArrElement(values, func(s string) (int, error) {
-								val, err := strconv.ParseInt(s, 10, strconv.IntSize)
-								if err != nil {
-									return 0, err
-								}
-								return int(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Int8:
-							vs, err := parseArrElement(values, func(s string) (int8, error) {
-								val, err := strconv.ParseInt(s, 10, 8)
-								if err != nil {
-									return 0, err
-								}
-								return int8(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Int16:
-							vs, err := parseArrElement(values, func(s string) (int16, error) {
-								val, err := strconv.ParseInt(s, 10, 16)
-								if err != nil {
-									return 0, err
-								}
-								return int16(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Int32:
-							vs, err := parseArrElement(values, func(s string) (int32, error) {
-								val, err := strconv.ParseInt(s, 10, 32)
-								if err != nil {
-									return 0, err
-								}
-								return int32(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Int64:
-							vs, err := parseArrElement(values, func(s string) (int64, error) {
-								val, err := strconv.ParseInt(s, 10, 64)
-								if err != nil {
-									return 0, err
-								}
-								return int64(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Uint:
-							vs, err := parseArrElement(values, func(s string) (uint, error) {
-								val, err := strconv.ParseUint(s, 10, strconv.IntSize)
-								if err != nil {
-									return 0, err
-								}
-								return uint(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Uint16:
-							vs, err := parseArrElement(values, func(s string) (uint16, error) {
-								val, err := strconv.ParseUint(s, 10, 16)
-								if err != nil {
-									return 0, err
-								}
-								return uint16(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Uint32:
-							vs, err := parseArrElement(values, func(s string) (uint32, error) {
-								val, err := strconv.ParseUint(s, 10, 32)
-								if err != nil {
-									return 0, err
-								}
-								return uint32(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Uint64:
-							vs, err := parseArrElement(values, func(s string) (uint64, error) {
-								val, err := strconv.ParseUint(s, 10, 64)
-								if err != nil {
-									return 0, err
-								}
-								return uint64(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid integer")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Float32:
-							vs, err := parseArrElement(values, func(s string) (float32, error) {
-								val, err := strconv.ParseFloat(s, 32)
-								if err != nil {
-									return 0, err
-								}
-								return float32(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid floating value")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-
-						case reflect.Float64:
-							vs, err := parseArrElement(values, func(s string) (float64, error) {
-								val, err := strconv.ParseFloat(s, 64)
-								if err != nil {
-									return 0, err
-								}
-								return float64(val), nil
-							})
-							if err != nil {
-								res.Add(pb, value, "invalid floating value")
-								return
-							}
-							f.Set(reflect.ValueOf(vs))
-							pv = vs
-						}
-						break
-					}
-
-					// Special case: time.Time
-					if f.Type() == timeType {
-						t, err := time.Parse(p.TimeFormat, value)
-						if err != nil {
-							res.Add(pb, value, "invalid date/time for format "+p.TimeFormat)
-							return
-						}
-						f.Set(reflect.ValueOf(t))
-						pv = value
-						break
-						// Special case: url.URL
-					} else if f.Type() == urlType {
-						u, err := url.Parse(value)
-						if err != nil {
-							res.Add(pb, value, "invalid url.URL value")
-							return
-						}
-						f.Set(reflect.ValueOf(*u))
-						pv = value
-						break
-					}
-
-					// Last resort: use the `encoding.TextUnmarshaler` interface.
-					if fn, ok := f.Addr().Interface().(encoding.TextUnmarshaler); ok {
-						if err := fn.UnmarshalText([]byte(value)); err != nil {
-							res.Add(pb, value, "invalid value: "+err.Error())
-							return
-						}
-						pv = value
-						break
-					}
-
-					panic("unsupported param type " + p.Type.String())
-				}
-
-				if !op.SkipValidateParams {
-					Validate(oapi.Components.Schemas, p.Schema, pb, ModeWriteToServer, pv, res)
-				}
+			if !op.SkipValidateParams {
+				Validate(oapi.Components.Schemas, p.Schema, pb, ModeWriteToServer, pv, res)
 			}
 		})
 
 		// Read input body if defined.
-		if hasInputBody || rawBodyIndex != -1 {
+		if hasInputBody || len(rawBodyIndex) > 0 {
 			if op.BodyReadTimeout > 0 {
 				ctx.SetReadDeadline(time.Now().Add(op.BodyReadTimeout))
 			} else if op.BodyReadTimeout < 0 {
@@ -1182,156 +772,120 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 				ctx.SetReadDeadline(time.Time{})
 			}
 
-			if rawBodyMultipart || rawBodyDecodedMultipart {
-				form, err := ctx.GetMultipartForm()
-				if err != nil || form == nil {
-					res.Errors = append(res.Errors, &ErrorDetail{
-						Location: "body",
-						Message:  "cannot read multipart form: " + err.Error(),
-					})
-				} else {
-					f := v.Field(rawBodyIndex)
-					if rawBodyMultipart {
-						f.Set(reflect.ValueOf(*form))
-					} else {
-						f.FieldByName("Form").Set(reflect.ValueOf(form))
-						r := f.Addr().
-							MethodByName("Decode").
-							Call([]reflect.Value{
-								reflect.ValueOf(op.RequestBody.Content["multipart/form-data"]),
-							})
-						errs := r[0].Interface().([]error)
-						if errs != nil {
-							WriteErr(api, ctx, http.StatusUnprocessableEntity, "validation failed", errs...)
-							return
-						}
-					}
-				}
-			} else {
-				buf := bufPool.Get().(*bytes.Buffer)
-				reader := ctx.BodyReader()
-				if reader == nil {
-					reader = bytes.NewReader(nil)
-				}
-				if closer, ok := reader.(io.Closer); ok {
-					defer closer.Close()
-				}
-				if op.MaxBodyBytes > 0 {
-					reader = io.LimitReader(reader, op.MaxBodyBytes)
-				}
-				count, err := io.Copy(buf, reader)
-				if op.MaxBodyBytes > 0 {
-					if count == op.MaxBodyBytes {
-						buf.Reset()
-						bufPool.Put(buf)
-						WriteErr(api, ctx, http.StatusRequestEntityTooLarge, fmt.Sprintf("request body is too large limit=%d bytes", op.MaxBodyBytes), res.Errors...)
-						return
-					}
-				}
+			if rbt.isMultipart() {
+				// Read form
+				form, err := readForm(ctx)
+
 				if err != nil {
-					buf.Reset()
-					bufPool.Put(buf)
-
-					if e, ok := err.(net.Error); ok && e.Timeout() {
-						WriteErr(api, ctx, http.StatusRequestTimeout, "request body read timeout", res.Errors...)
-						return
-					}
-
-					WriteErr(api, ctx, http.StatusInternalServerError, "cannot read request body", err)
-					return
-				}
-				body := buf.Bytes()
-
-				if rawBodyIndex != -1 {
-					f := v.Field(rawBodyIndex)
-					f.SetBytes(body)
-				}
-
-				if len(body) == 0 {
-					if op.RequestBody != nil && op.RequestBody.Required {
-						buf.Reset()
-						bufPool.Put(buf)
-						WriteErr(api, ctx, http.StatusBadRequest, "request body is required", res.Errors...)
-						return
-					}
+					res.Errors = append(res.Errors, err)
 				} else {
-					parseErrCount := 0
-					if hasInputBody && !op.SkipValidateBody {
-						// Validate the input. First, parse the body into []any or map[string]any
-						// or equivalent, which can be easily validated. Then, convert to the
-						// expected struct type to call the handler.
-						var parsed any
-						if err := api.Unmarshal(ctx.Header("Content-Type"), body, &parsed); err != nil {
-							errStatus = http.StatusBadRequest
-							if errors.Is(err, ErrUnknownContentType) {
-								errStatus = http.StatusUnsupportedMediaType
-							}
-							res.Errors = append(res.Errors, &ErrorDetail{
-								Location: "body",
-								Message:  err.Error(),
-								Value:    body,
-							})
-							parseErrCount++
-						} else {
-							pb.Reset()
-							pb.Push("body")
-							count := len(res.Errors)
-							Validate(oapi.Components.Schemas, inSchema, pb, ModeWriteToServer, parsed, res)
-							parseErrCount = len(res.Errors) - count
-							if parseErrCount > 0 {
-								errStatus = http.StatusUnprocessableEntity
-							}
-						}
-					}
+					var formValueParser func(val reflect.Value)
+					if rbt == rbtMultipart {
+						formValueParser = func(val reflect.Value) {}
+					} else {
+						rawBodyF := v.FieldByIndex(rawBodyIndex)
+						rawBodyDataF := rawBodyF.FieldByName("data")
+						rawBodyDataT := rawBodyDataF.Type()
 
-					if hasInputBody && len(inputBodyIndex) > 0 {
-						// We need to get the body into the correct type now that it has been
-						// validated. Benchmarks on Go 1.20 show that using `json.Unmarshal` a
-						// second time is faster than `mapstructure.Decode` or any of the other
-						// common reflection-based approaches when using real-world medium-sized
-						// JSON payloads with lots of strings.
-						f := v
-						for _, index := range inputBodyIndex {
-							f = f.Field(index)
-						}
-						if err := api.Unmarshal(ctx.Header("Content-Type"), body, f.Addr().Interface()); err != nil {
-							if parseErrCount == 0 {
-								// Hmm, this should have worked... validator missed something?
-								res.Errors = append(res.Errors, &ErrorDetail{
-									Location: "body",
-									Message:  err.Error(),
-									Value:    string(body),
-								})
-							}
-						} else {
-							// Set defaults for any fields that were not in the input.
-							defaults.Every(v, func(item reflect.Value, def any) {
-								if item.IsZero() {
-									item.Set(reflect.Indirect(reflect.ValueOf(def)))
+						rawBodyInputParams := findParams(oapi.Components.Schemas, &op, rawBodyDataT)
+						formValueParser = func(val reflect.Value) {
+							rawBodyInputParams.Every(val, func(f reflect.Value, p *paramFieldInfo) {
+								f = reflect.Indirect(f)
+								if f.Kind() == reflect.Invalid {
+									return
+								}
+
+								pb.Reset()
+								pb.Push(p.Loc)
+								pb.Push(p.Name)
+
+								value, ok := form.Value[p.Name]
+								if !ok || (len(value) > 0 && value[0] == "") {
+									_, isFile := form.File[p.Name]
+									if !op.SkipValidateParams && p.Required && !isFile {
+										res.Add(pb, "", "required "+p.Loc+" parameter is missing")
+									}
+									return
+								}
+
+								// Validation should fail if multiple values are
+								// provided but the type of f is not a slice.
+								if len(value) > 1 && f.Type().Kind() != reflect.Slice {
+									res.Add(pb, value, "expected at most one value, but received multiple values")
+									return
+								}
+								pv, err := parseInto(ctx, f, value[0], value, *p)
+								if err != nil {
+									res.Add(pb, value, err.Error())
+								}
+
+								if !op.SkipValidateParams {
+									Validate(oapi.Components.Schemas, p.Schema, pb, ModeWriteToServer, pv, res)
 								}
 							})
 						}
 					}
 
-					if rawBodyIndex != -1 {
-						// If the raw body is used, then we must wait until *AFTER* the
-						// handler has run to return the body byte buffer to the pool, as
-						// the handler can read and modify this buffer. The safest way is
-						// to just wait until the end of this handler via defer.
-						defer bufPool.Put(buf)
-						defer buf.Reset()
-					} else {
-						// No raw body, and the body has already been unmarshalled above, so
-						// we can return the buffer to the pool now as we don't need the
-						// bytes any more.
-						buf.Reset()
-						bufPool.Put(buf)
+					if cErr := processMultipartMsgBody(form, op, v, rbt, rawBodyIndex, formValueParser); cErr != nil {
+						writeErr(api, ctx, cErr, *res)
+						return
 					}
+				}
+			} else {
+				// Read body
+				buf := bufPool.Get().(*bytes.Buffer)
+				bufCloser := func() {
+					buf.Reset()
+					bufPool.Put(buf)
+				}
+				if cErr := readBody(buf, ctx, op.MaxBodyBytes); cErr != nil {
+					bufCloser()
+					writeErr(api, ctx, cErr, *res)
+					return
+				}
+				body := buf.Bytes()
+
+				// Store raw body
+				if len(rawBodyIndex) > 0 {
+					f := v.FieldByIndex(rawBodyIndex)
+					f.SetBytes(body)
+				}
+
+				// Process body
+				unmarshaler := func(data []byte, v any) error { return api.Unmarshal(ctx.Header("Content-Type"), data, v) }
+				validator := func(data any, res *ValidateResult) {
+					pb.Reset()
+					pb.Push("body")
+					Validate(oapi.Components.Schemas, inSchema, pb, ModeWriteToServer, data, res)
+				}
+				processErrStatus, cErr := processRegularMsgBody(body, op, v, hasInputBody, inputBodyIndex, unmarshaler, validator, defaults, res)
+				if processErrStatus > 0 {
+					errStatus = processErrStatus
+				}
+				if cErr != nil {
+					bufCloser()
+					writeErr(api, ctx, cErr, *res)
+					return
+				}
+
+				// Clean up
+				// If the raw body is used, then we must wait until *AFTER* the
+				// handler has run to return the body byte buffer to the pool, as
+				// the handler can read and modify this buffer. The safest way is
+				// to just wait until the end of this handler via defer.
+				if len(rawBodyIndex) > 0 {
+					defer bufCloser()
+				} else {
+					bufCloser()
 				}
 			}
 		}
 
 		resolvers.EveryPB(pb, v, func(item reflect.Value, _ bool) {
+			item = reflect.Indirect(item)
+			if item.Kind() == reflect.Invalid {
+				return
+			}
 			if item.CanAddr() {
 				item = item.Addr()
 			} else {
@@ -1385,21 +939,16 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 			}
 
 			status := http.StatusInternalServerError
+
+			// handle status error
 			var se StatusError
 			if errors.As(err, &se) {
-				status = se.GetStatus()
-				err = se
-			} else {
-				err = NewError(http.StatusInternalServerError, err.Error())
+				writeResponseWithPanic(api, ctx, se.GetStatus(), "", se)
+				return
 			}
 
-			ct, _ := api.Negotiate(ctx.Header("Accept"))
-			if ctf, ok := err.(ContentTypeFilter); ok {
-				ct = ctf.ContentType(ct)
-			}
-
-			ctx.SetHeader("Content-Type", ct)
-			transformAndWrite(api, ctx, status, ct, err)
+			se = NewErrorWithContext(ctx, status, "unexpected error occurred", err)
+			writeResponseWithPanic(api, ctx, se.GetStatus(), "", se)
 			return
 		}
 
@@ -1414,13 +963,18 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 		ct := ""
 		vo := reflect.ValueOf(output).Elem()
 		outHeaders.Every(vo, func(f reflect.Value, info *headerInfo) {
+			f = reflect.Indirect(f)
+			if f.Kind() == reflect.Invalid {
+				return
+			}
 			if f.Kind() == reflect.Slice {
 				for i := 0; i < f.Len(); i++ {
 					writeHeader(ctx.AppendHeader, info, f.Index(i))
 				}
 			} else {
 				if f.Kind() == reflect.String && info.Name == "Content-Type" {
-					// Track custom content type.
+					// Track custom content type. This overrides any content negotiation
+					// that would happen when writing the response.
 					ct = f.String()
 				}
 				writeHeader(ctx.SetHeader, info, f)
@@ -1447,26 +1001,941 @@ func Register[I, O any](api API, op Operation, handler func(context.Context, *I)
 				return
 			}
 
-			// Only write a content type if one wasn't already written by the
-			// response headers handled above.
-			if ct == "" {
-				ct, err = api.Negotiate(ctx.Header("Accept"))
-				if err != nil {
-					WriteErr(api, ctx, http.StatusNotAcceptable, "unable to marshal response", err)
-					return
-				}
-				if ctf, ok := body.(ContentTypeFilter); ok {
-					ct = ctf.ContentType(ct)
-				}
-
-				ctx.SetHeader("Content-Type", ct)
-			}
-
-			transformAndWrite(api, ctx, status, ct, body)
+			writeResponseWithPanic(api, ctx, status, ct, body)
 		} else {
 			ctx.SetStatus(status)
 		}
 	})))
+}
+
+func parseDeepObjectQuery(query url.Values, name string) map[string]string {
+	result := make(map[string]string)
+
+	for key, values := range query {
+		if strings.Contains(key, "[") {
+			// Nested object
+			keys := strings.Split(key, "[")
+			if keys[0] != name {
+				continue
+			}
+			k := strings.Trim(keys[1], "]")
+			result[k] = values[0]
+		}
+	}
+	return result
+}
+
+func setDeepObjectValue(pb *PathBuffer, res *ValidateResult, f reflect.Value, data map[string]string) map[string]any {
+	t := f.Type()
+	result := make(map[string]any)
+	switch t.Kind() {
+	case reflect.Map:
+		if t.Key().Kind() != reflect.String {
+			panic("unsupported map key type")
+		}
+		f.Set(reflect.MakeMap(t))
+		for k, v := range data {
+			key := reflect.New(t.Key()).Elem()
+			key.SetString(k)
+			value := reflect.New(t.Elem()).Elem()
+			if err := setFieldValue(value, v); err != nil {
+				pb.Push(k)
+				res.Add(pb, v, err.Error())
+				pb.Pop()
+			} else {
+				f.SetMapIndex(key, value)
+				result[k] = value.Interface()
+			}
+		}
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			// Get the field name
+			fieldName := field.Name
+
+			if name := jsonName(field); name != "" {
+				fieldName = name
+			}
+
+			fv := f.Field(i)
+			if val, ok := data[fieldName]; ok {
+				if err := setFieldValue(fv, val); err != nil {
+					pb.Push(fieldName)
+					res.Add(pb, val, err.Error())
+					pb.Pop()
+				} else {
+					result[fieldName] = fv.Interface()
+				}
+			} else {
+				if val := field.Tag.Get("default"); val != "" {
+					setFieldValue(fv, val)
+					result[fieldName] = fv.Interface()
+				}
+			}
+		}
+	}
+	return result
+}
+
+func setFieldValue(f reflect.Value, value string) error {
+	switch f.Kind() {
+	case reflect.String:
+		f.SetString(value)
+	case reflect.Interface:
+		f.Set(reflect.ValueOf(value))
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return errors.New("invalid integer")
+		}
+		f.SetInt(v)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return errors.New("invalid integer")
+		}
+		f.SetUint(v)
+	case reflect.Float32, reflect.Float64:
+		v, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return errors.New("invalid float")
+		}
+		f.SetFloat(v)
+	case reflect.Bool:
+		v, err := strconv.ParseBool(value)
+		if err != nil {
+			return errors.New("invalid boolean")
+		}
+		f.SetBool(v)
+	default:
+		return errors.New("unsupported type")
+	}
+	return nil
+}
+
+// ParamWrapper is an interface that can be implemented by a wrapping type
+// to expose a field into which request parameters may be parsed.
+// Must have pointer receiver.
+// Example:
+//
+//	type OptionalParam[T any] struct {
+//		Value T
+//		IsSet bool
+//	}
+//	func (o *OptionalParam[T]) Receiver() reflect.Value {
+//		return reflect.ValueOf(o).Elem().Field(0)
+//	}
+type ParamWrapper interface {
+	Receiver() reflect.Value
+}
+
+// ParamReactor is an interface that can be implemented to react to request
+// parameters being set on the field. Must have pointer receiver.
+// Intended to be combined with ParamWrapper interface.
+//
+// First argument is a boolean indicating if the parameter was set in the request.
+// Second argument is the parsed value from Huma.
+//
+// Example:
+//
+//	func (o *OptionalParam[T]) OnParamSet(isSet bool, parsed any) {
+//		 o.IsSet = isSet
+//	}
+type ParamReactor interface {
+	OnParamSet(isSet bool, parsed any)
+}
+
+// initResponses initializes Responses if it was unset.
+func initResponses(op *Operation) {
+	if op.Responses == nil {
+		op.Responses = map[string]*Response{}
+	}
+}
+
+// processInputType validates the input type, extracts expected requests and
+// defines them on the operation op.
+func processInputType(inputType reflect.Type, op *Operation, registry Registry) (*findResult[*paramFieldInfo], []int, bool, []int, rawBodyType, *Schema) {
+	inputParams := findParams(registry, op, inputType)
+	inputBodyIndex := []int{}
+	hasInputBody := false
+	if f, ok := inputType.FieldByName("Body"); ok {
+		hasInputBody = true
+		inputBodyIndex = f.Index
+		initRequestBody(op)
+		setRequestBodyFromBody(op, registry, f, inputType)
+		ensureBodyReadTimeout(op)
+		ensureMaxBodyBytes(op)
+	}
+	rawBodyIndex := []int{}
+	var rbt rawBodyType
+	if f, ok := inputType.FieldByName("RawBody"); ok {
+		rawBodyIndex = f.Index
+		initRequestBody(op, setRequestBodyRequired)
+		rbt = setRequestBodyFromRawBody(op, registry, f)
+	}
+
+	if op.RequestBody != nil {
+		for _, mediatype := range op.RequestBody.Content {
+			if mediatype.Schema != nil {
+				// Ensure all schema validation errors are set up properly as some
+				// parts of the schema may have been user-supplied.
+				mediatype.Schema.PrecomputeMessages()
+			}
+		}
+	}
+
+	var inSchema *Schema
+	if op.RequestBody != nil && op.RequestBody.Content != nil && op.RequestBody.Content["application/json"] != nil && op.RequestBody.Content["application/json"].Schema != nil {
+		hasInputBody = true
+		inSchema = op.RequestBody.Content["application/json"].Schema
+	}
+	return inputParams, inputBodyIndex, hasInputBody, rawBodyIndex, rbt, inSchema
+}
+
+// ensureMaxBodyBytes sets the MaxBodyBytes to a default value if it was unset.
+func ensureMaxBodyBytes(op *Operation) {
+	if op.MaxBodyBytes == 0 {
+		// 1 MB default
+		op.MaxBodyBytes = 1024 * 1024
+	}
+}
+
+// ensureBodyReadTimeout sets the BodyReadTimeout to a default value if it was unset.
+func ensureBodyReadTimeout(op *Operation) {
+	if op.BodyReadTimeout == 0 {
+		// 5 second default
+		op.BodyReadTimeout = 5 * time.Second
+	}
+}
+
+// setRequestBodyFromBody configures op.RequestBody from the Body field.
+func setRequestBodyFromBody(op *Operation, registry Registry, fBody reflect.StructField, inputType reflect.Type) {
+	if fBody.Tag.Get("required") == "true" || (fBody.Type.Kind() != reflect.Ptr && fBody.Type.Kind() != reflect.Interface) {
+		setRequestBodyRequired(op.RequestBody)
+	}
+	contentType := "application/json"
+	if c := fBody.Tag.Get("contentType"); c != "" {
+		contentType = c
+	}
+	if op.RequestBody.Content[contentType] == nil {
+		op.RequestBody.Content[contentType] = &MediaType{}
+	}
+	if op.RequestBody.Content[contentType].Schema == nil {
+		hint := getHint(inputType, fBody.Name, op.OperationID+"Request")
+		if nameHint := fBody.Tag.Get("nameHint"); nameHint != "" {
+			hint = nameHint
+		}
+		s := SchemaFromField(registry, fBody, hint)
+		op.RequestBody.Content[contentType].Schema = s
+	}
+}
+
+type rawBodyType int
+
+const (
+	rbtMultipart rawBodyType = iota + 1
+	rbtMultipartDecoded
+	rbtOther
+)
+
+func (r rawBodyType) isMultipart() bool {
+	return r == rbtMultipart || r == rbtMultipartDecoded
+}
+
+// setRequestBodyFromRawBody configures op.RequestBody from the RawBody field.
+func setRequestBodyFromRawBody(op *Operation, r Registry, fRawBody reflect.StructField) rawBodyType {
+	rbt := rbtOther
+	contentType := "application/octet-stream"
+	if fRawBody.Type.String() == "multipart.Form" {
+		contentType = "multipart/form-data"
+		rbt = rbtMultipart
+	}
+	if strings.HasPrefix(fRawBody.Type.Name(), "MultipartFormFiles") {
+		contentType = "multipart/form-data"
+		rbt = rbtMultipartDecoded
+	}
+	if c := fRawBody.Tag.Get("contentType"); c != "" {
+		contentType = c
+	}
+
+	if contentType != "multipart/form-data" {
+		op.RequestBody.Content[contentType] = &MediaType{
+			Schema: &Schema{
+				Type:   "string",
+				Format: "binary",
+			},
+		}
+		return rbt
+	}
+	if op.RequestBody.Content["multipart/form-data"] != nil {
+		return rbt
+	}
+
+	switch rbt {
+	case rbtMultipart:
+		op.RequestBody.Content["multipart/form-data"] = &MediaType{
+			Schema: &Schema{
+				Type: "object",
+				Properties: map[string]*Schema{
+					"name": {
+						Type:        "string",
+						Description: "general purpose name for multipart form value",
+					},
+					"filename": {
+						Type:        "string",
+						Format:      "binary",
+						Description: "filename of the file being uploaded",
+					},
+				},
+			},
+		}
+	case rbtMultipartDecoded:
+		dataField, ok := fRawBody.Type.FieldByName("data")
+		if !ok {
+			panic("Expected type MultipartFormFiles[T] to have a 'data *T' generic pointer field")
+		}
+		op.RequestBody.Content["multipart/form-data"] = &MediaType{
+			Schema:   multiPartFormFileSchema(r, dataField.Type.Elem()),
+			Encoding: multiPartContentEncoding(dataField.Type.Elem()),
+		}
+		op.RequestBody.Required = false
+	}
+	return rbt
+}
+
+// initRequestBody initializes an empty RequestBody and its Content map.
+func initRequestBody(op *Operation, rbOpts ...func(*RequestBody)) {
+	if op.RequestBody == nil {
+		op.RequestBody = &RequestBody{}
+	}
+	if op.RequestBody.Content == nil {
+		op.RequestBody.Content = map[string]*MediaType{}
+	}
+	for _, opt := range rbOpts {
+		opt(op.RequestBody)
+	}
+}
+
+func setRequestBodyRequired(rb *RequestBody) {
+	rb.Required = true
+}
+
+// processOutputType validates the output type, extracts possible responses and
+// defines them on the operation op.
+func processOutputType(outputType reflect.Type, op *Operation, registry Registry) (*findResult[*headerInfo], int, int, bool) {
+	outStatusIndex := -1
+	if f, ok := outputType.FieldByName("Status"); ok {
+		outStatusIndex = f.Index[0]
+		if f.Type.Kind() != reflect.Int {
+			panic("status field must be an int")
+		}
+		// TODO: enum tag?
+		// TODO: register each of the possible responses with the right model
+		//       and headers down below.
+	}
+	outBodyIndex := -1
+	outBodyFunc := false
+	if f, ok := outputType.FieldByName("Body"); ok {
+		outBodyIndex = f.Index[0]
+		if f.Type.Kind() == reflect.Func {
+			outBodyFunc = true
+
+			if f.Type != bodyCallbackType {
+				panic("body field must be a function with signature func(huma.Context)")
+			}
+		}
+		status := op.DefaultStatus
+		if status == 0 {
+			status = http.StatusOK
+		}
+		statusStr := strconv.Itoa(status)
+		if op.Responses[statusStr] == nil {
+			op.Responses[statusStr] = &Response{}
+		}
+		if op.Responses[statusStr].Description == "" {
+			op.Responses[statusStr].Description = http.StatusText(status)
+		}
+		if op.Responses[statusStr].Headers == nil {
+			op.Responses[statusStr].Headers = map[string]*Param{}
+		}
+		if !outBodyFunc {
+			hint := getHint(outputType, f.Name, op.OperationID+"Response")
+			if nameHint := f.Tag.Get("nameHint"); nameHint != "" {
+				hint = nameHint
+			}
+			outSchema := SchemaFromField(registry, f, hint)
+			if op.Responses[statusStr].Content == nil {
+				op.Responses[statusStr].Content = map[string]*MediaType{}
+			}
+			// Check if the field's type implements ContentTypeFilter
+			contentType := "application/json"
+			if reflect.PointerTo(f.Type).Implements(reflect.TypeFor[ContentTypeFilter]()) {
+				instance := reflect.New(f.Type).Interface().(ContentTypeFilter)
+				contentType = instance.ContentType(contentType)
+			}
+			if len(op.Responses[statusStr].Content) == 0 {
+				op.Responses[statusStr].Content[contentType] = &MediaType{}
+			}
+			if op.Responses[statusStr].Content[contentType] != nil && op.Responses[statusStr].Content[contentType].Schema == nil {
+				op.Responses[statusStr].Content[contentType].Schema = outSchema
+			}
+		}
+	}
+	if op.DefaultStatus == 0 {
+		if outBodyIndex != -1 {
+			op.DefaultStatus = http.StatusOK
+		} else if op.Method == http.MethodHead {
+			op.DefaultStatus = http.StatusOK
+		} else {
+			op.DefaultStatus = http.StatusNoContent
+		}
+	}
+	defaultStatusStr := strconv.Itoa(op.DefaultStatus)
+	if op.Responses[defaultStatusStr] == nil {
+		op.Responses[defaultStatusStr] = &Response{
+			Description: http.StatusText(op.DefaultStatus),
+		}
+	}
+	outHeaders := findHeaders(outputType)
+	for _, entry := range outHeaders.Paths {
+		// Document the header's name and type.
+		if op.Responses[defaultStatusStr].Headers == nil {
+			op.Responses[defaultStatusStr].Headers = map[string]*Param{}
+		}
+		v := entry.Value
+		f := v.Field
+		if f.Type.Kind() == reflect.Slice {
+			f.Type = deref(f.Type.Elem())
+		}
+		if reflect.PointerTo(f.Type).Implements(fmtStringerType) {
+			// Special case: this field will be written as a string by calling
+			// `.String()` on the value.
+			f.Type = stringType
+		}
+		op.Responses[defaultStatusStr].Headers[v.Name] = &Header{
+			// We need to generate the schema from the field to get validation info
+			// like min/max and enums. Useful to let the client know possible values.
+			Schema: SchemaFromField(registry, f, getHint(outputType, f.Name, op.OperationID+defaultStatusStr+v.Name)),
+		}
+	}
+	return outHeaders, outStatusIndex, outBodyIndex, outBodyFunc
+}
+
+// defineErrors extracts possible error responses and defines them on the
+// operation op.
+func defineErrors(op *Operation, registry Registry) {
+	exampleErr := NewError(0, "")
+	errContentType := "application/json"
+	if ctf, ok := exampleErr.(ContentTypeFilter); ok {
+		errContentType = ctf.ContentType(errContentType)
+	}
+	errType := deref(reflect.TypeOf(exampleErr))
+	errSchema := registry.Schema(errType, true, getHint(errType, "", "Error"))
+	for _, code := range op.Errors {
+		op.Responses[strconv.Itoa(code)] = &Response{
+			Description: http.StatusText(code),
+			Content: map[string]*MediaType{
+				errContentType: {
+					Schema: errSchema,
+				},
+			},
+		}
+	}
+	if len(op.Responses) <= 1 && len(op.Errors) == 0 {
+		// No errors are defined, so set a default response.
+		op.Responses["default"] = &Response{
+			Description: "Error",
+			Content: map[string]*MediaType{
+				errContentType: {
+					Schema: errSchema,
+				},
+			},
+		}
+	}
+}
+
+// getParamValue extracts the requested parameter from the relevant
+// context or cookie source. If unset, the function returns the default value
+// for this parameter.
+func getParamValue(p paramFieldInfo, ctx Context, cookies map[string]*http.Cookie) string {
+	var value string
+	switch p.Loc {
+	case "path":
+		value = ctx.Param(p.Name)
+	case "query":
+		value = ctx.Query(p.Name)
+	case "header":
+		value = ctx.Header(p.Name)
+	case "cookie":
+		if c, ok := cookies[p.Name]; ok {
+			value = c.Value
+		}
+	}
+	if value == "" {
+		value = p.Default
+	}
+	return value
+}
+
+var errUnparsable = errors.New("unparsable value")
+
+// parseInto converts the string value into the expected type using the
+// parameter field information p and sets the result on f.
+func parseInto(ctx Context, f reflect.Value, value string, preSplit []string, p paramFieldInfo) (any, error) {
+	// built-in types
+	switch p.Type.Kind() {
+	case reflect.String:
+		f.SetString(value)
+		return value, nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.SetInt(v)
+		return v, nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.SetUint(v)
+		return v, nil
+	case reflect.Float32, reflect.Float64:
+		v, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return nil, errors.New("invalid float")
+		}
+		f.SetFloat(v)
+		return v, nil
+	case reflect.Bool:
+		v, err := strconv.ParseBool(value)
+		if err != nil {
+			return nil, errors.New("invalid boolean")
+		}
+		f.SetBool(v)
+		return v, nil
+	case reflect.Slice:
+		var values []string
+		if preSplit != nil {
+			values = preSplit
+		} else {
+			if p.Explode {
+				u := ctx.URL()
+				values = (&u).Query()[p.Name]
+			} else {
+				values = strings.Split(value, ",")
+			}
+		}
+		pv, err := parseSliceInto(f, values)
+		if err != nil {
+			if errors.Is(err, errUnparsable) {
+				break
+			}
+			return nil, err
+		}
+		return pv, nil
+	}
+
+	// special types
+	switch f.Type() {
+	case timeType: // Special case: time.Time
+		// return nil, errors.New(value)
+		t, err := time.Parse(p.TimeFormat, value)
+		if err != nil {
+			return nil, errors.New("invalid date/time for format " + p.TimeFormat)
+		}
+		f.Set(reflect.ValueOf(t))
+		return value, nil
+	case urlType: // Special case: url.URL
+		u, err := url.Parse(value)
+		if err != nil {
+			return nil, errors.New("invalid url.URL value")
+		}
+		f.Set(reflect.ValueOf(*u))
+		return value, nil
+	}
+
+	// Last resort: use the `encoding.TextUnmarshaler` interface.
+	if fn, ok := f.Addr().Interface().(encoding.TextUnmarshaler); ok {
+		if err := fn.UnmarshalText([]byte(value)); err != nil {
+			return nil, errors.New("invalid value: " + err.Error())
+		}
+		return value, nil
+	}
+
+	panic("unsupported param type " + p.Type.String())
+}
+
+// parseSliceInto converts a slice of string values into the expected type of f
+// and sets the result on f.
+func parseSliceInto(f reflect.Value, values []string) (any, error) {
+	switch f.Type().Elem().Kind() {
+
+	case reflect.String:
+		if f.Type() == reflect.TypeOf(values) {
+			f.Set(reflect.ValueOf(values))
+		} else {
+			// Change element type to support slice of string subtypes (enums)
+			enumValues := reflect.New(f.Type()).Elem()
+			for _, val := range values {
+				enumVal := reflect.New(f.Type().Elem()).Elem()
+				enumVal.SetString(val)
+				enumValues.Set(reflect.Append(enumValues, enumVal))
+			}
+			f.Set(enumValues)
+		}
+		return values, nil
+
+	case reflect.Int:
+		vs, err := parseArrElement(values, func(s string) (int, error) {
+			val, err := strconv.ParseInt(s, 10, strconv.IntSize)
+			if err != nil {
+				return 0, err
+			}
+			return int(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Int8:
+		vs, err := parseArrElement(values, func(s string) (int8, error) {
+			val, err := strconv.ParseInt(s, 10, 8)
+			if err != nil {
+				return 0, err
+			}
+			return int8(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Int16:
+		vs, err := parseArrElement(values, func(s string) (int16, error) {
+			val, err := strconv.ParseInt(s, 10, 16)
+			if err != nil {
+				return 0, err
+			}
+			return int16(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Int32:
+		vs, err := parseArrElement(values, func(s string) (int32, error) {
+			val, err := strconv.ParseInt(s, 10, 32)
+			if err != nil {
+				return 0, err
+			}
+			return int32(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Int64:
+		vs, err := parseArrElement(values, func(s string) (int64, error) {
+			val, err := strconv.ParseInt(s, 10, 64)
+			if err != nil {
+				return 0, err
+			}
+			return val, nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Uint:
+		vs, err := parseArrElement(values, func(s string) (uint, error) {
+			val, err := strconv.ParseUint(s, 10, strconv.IntSize)
+			if err != nil {
+				return 0, err
+			}
+			return uint(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Uint8:
+		vs, err := parseArrElement(values, func(s string) (uint8, error) {
+			val, err := strconv.ParseUint(s, 10, 8)
+			if err != nil {
+				return 0, err
+			}
+			return uint8(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Uint16:
+		vs, err := parseArrElement(values, func(s string) (uint16, error) {
+			val, err := strconv.ParseUint(s, 10, 16)
+			if err != nil {
+				return 0, err
+			}
+			return uint16(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Uint32:
+		vs, err := parseArrElement(values, func(s string) (uint32, error) {
+			val, err := strconv.ParseUint(s, 10, 32)
+			if err != nil {
+				return 0, err
+			}
+			return uint32(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Uint64:
+		vs, err := parseArrElement(values, func(s string) (uint64, error) {
+			val, err := strconv.ParseUint(s, 10, 64)
+			if err != nil {
+				return 0, err
+			}
+			return val, nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid integer")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Float32:
+		vs, err := parseArrElement(values, func(s string) (float32, error) {
+			val, err := strconv.ParseFloat(s, 32)
+			if err != nil {
+				return 0, err
+			}
+			return float32(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid floating value")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+
+	case reflect.Float64:
+		vs, err := parseArrElement(values, func(s string) (float64, error) {
+			val, err := strconv.ParseFloat(s, 64)
+			if err != nil {
+				return 0, err
+			}
+			return float64(val), nil
+		})
+		if err != nil {
+			return nil, errors.New("invalid floating value")
+		}
+		f.Set(reflect.ValueOf(vs))
+		return vs, nil
+	}
+	return nil, errUnparsable
+}
+
+type contextError struct {
+	Code int
+	Msg  string
+	Errs []error
+}
+
+func (e *contextError) Error() string {
+	return e.Msg
+}
+
+func writeErr(api API, ctx Context, cErr *contextError, res ValidateResult) {
+	if cErr.Errs != nil {
+		WriteErr(api, ctx, cErr.Code, cErr.Msg, cErr.Errs...)
+	} else {
+		WriteErr(api, ctx, cErr.Code, cErr.Msg, res.Errors...)
+	}
+}
+
+func processMultipartMsgBody(form *multipart.Form, op Operation, v reflect.Value, rbt rawBodyType, rawBodyIndex []int, formValueParser func(val reflect.Value)) *contextError {
+	f := v.FieldByIndex(rawBodyIndex)
+	switch rbt {
+	case rbtMultipart:
+		// f is of type multipart.Form
+		f.Set(reflect.ValueOf(*form))
+	case rbtMultipartDecoded:
+		// f is of type MultipartFormFiles[T]
+		f.FieldByName("Form").Set(reflect.ValueOf(form))
+		r := f.Addr().
+			MethodByName("Decode").
+			Call(
+				[]reflect.Value{
+					reflect.ValueOf(op.RequestBody.Content["multipart/form-data"]),
+					reflect.ValueOf(formValueParser),
+				})
+		errs := r[0].Interface().([]error)
+		if errs != nil {
+			return &contextError{Code: http.StatusUnprocessableEntity, Msg: "validation failed", Errs: errs}
+		}
+	}
+	return nil
+}
+
+func readForm(ctx Context) (*multipart.Form, *ErrorDetail) {
+	form, err := ctx.GetMultipartForm()
+	if err != nil {
+		return form, &ErrorDetail{
+			Location: "body",
+			Message:  "cannot read multipart form: " + err.Error(),
+		}
+	}
+	return form, nil
+}
+
+type intoUnmarshaler = func(data []byte, v any) error
+
+// processRegularMsgBody parses the raw body with unmarshaler and validates it
+// with validator. Validation errors are documented in res and the
+// corresponding error code is returned. If no errors were found, the return
+// value is -1.
+func processRegularMsgBody(body []byte, op Operation, v reflect.Value, hasInputBody bool, inputBodyIndex []int, unmarshaler intoUnmarshaler, validator func(data any, res *ValidateResult), defaults *findResult[any], res *ValidateResult) (int, *contextError) {
+	errStatus := -1
+	// Check preconditions
+	if len(body) == 0 {
+		if op.RequestBody != nil && op.RequestBody.Required {
+			return errStatus, &contextError{Code: http.StatusBadRequest, Msg: "request body is required"}
+		}
+		return errStatus, nil
+	}
+	if !hasInputBody {
+		return errStatus, nil
+	}
+
+	// Validate
+	isValid := true
+	if !op.SkipValidateBody {
+		validateErrStatus := validateBody(body, unmarshaler, validator, res)
+		errStatus = validateErrStatus
+		if errStatus > 0 {
+			isValid = false
+		}
+	}
+
+	// Parse into value
+	if len(inputBodyIndex) > 0 {
+		if err := parseBodyInto(v, inputBodyIndex, unmarshaler, body, defaults); err != nil && isValid {
+			// Hmm, this should have worked... validator missed something?
+			res.Errors = append(res.Errors, err)
+		}
+	}
+	return errStatus, nil
+}
+
+// validateBody parses the raw body with u and validates it with the validator.
+// Any errors are documented in res and the corresponding error code is
+// returned. If no errors were found, the return value is -1.
+func validateBody(body []byte, u intoUnmarshaler, validator func(data any, res *ValidateResult), res *ValidateResult) int {
+	errStatus := -1
+	// Validate the input. First, parse the body into []any or map[string]any
+	// or equivalent, which can be easily validated. Then, convert to the
+	// expected struct type to call the handler.
+	var parsed any
+	if err := u(body, &parsed); err != nil {
+		errStatus = http.StatusBadRequest
+		if errors.Is(err, ErrUnknownContentType) {
+			errStatus = http.StatusUnsupportedMediaType
+		}
+
+		res.Errors = append(res.Errors, &ErrorDetail{
+			Location: "body",
+			Message:  err.Error(),
+			Value:    string(body),
+		})
+	} else {
+		preValidationErrCount := len(res.Errors)
+		validator(parsed, res)
+		if len(res.Errors)-preValidationErrCount > 0 {
+			errStatus = http.StatusUnprocessableEntity
+		}
+	}
+	return errStatus
+}
+
+// parseBodyInto parses the raw body with u and populates the result in v at
+// index bodyIndex. Afterwards, it sets default values on v for all fields that
+// were not populated with body.
+func parseBodyInto(v reflect.Value, bodyIndex []int, u intoUnmarshaler, body []byte, defaults *findResult[any]) *ErrorDetail {
+	// We need to get the body into the correct type now that it has been
+	// validated. Benchmarks on Go 1.20 show that using `json.Unmarshal` a
+	// second time is faster than `mapstructure.Decode` or any of the other
+	// common reflection-based approaches when using real-world medium-sized
+	// JSON payloads with lots of strings.
+	f := v.FieldByIndex(bodyIndex)
+	if err := u(body, f.Addr().Interface()); err != nil {
+		return &ErrorDetail{
+			Location: "body",
+			Message:  err.Error(),
+			Value:    string(body),
+		}
+	}
+	// Set defaults for any fields that were not in the input.
+	defaults.Every(v, func(item reflect.Value, def any) {
+		if item.IsZero() {
+			if item.Kind() == reflect.Pointer {
+				item.Set(reflect.New(item.Type().Elem()))
+				item = item.Elem()
+			}
+			item.Set(reflect.Indirect(reflect.ValueOf(def)))
+		}
+	})
+	return nil
+}
+
+// readBody reads the message body from ctx into buf, respecting the
+func readBody(buf io.Writer, ctx Context, maxBytes int64) *contextError {
+	reader := ctx.BodyReader()
+	if reader == nil {
+		reader = bytes.NewReader(nil)
+	}
+	if closer, ok := reader.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if maxBytes > 0 {
+		reader = io.LimitReader(reader, maxBytes)
+	}
+	count, err := io.Copy(buf, reader)
+	if maxBytes > 0 {
+		if count == maxBytes {
+			return &contextError{Code: http.StatusRequestEntityTooLarge, Msg: fmt.Sprintf("request body is too large limit=%d bytes", maxBytes)}
+		}
+	}
+	if err != nil {
+		if e, ok := err.(net.Error); ok && e.Timeout() {
+			return &contextError{Code: http.StatusRequestTimeout, Msg: "request body read timeout"}
+		}
+
+		return &contextError{Code: http.StatusInternalServerError, Msg: "cannot read request body", Errs: []error{err}}
+	}
+	return nil
 }
 
 // AutoRegister auto-detects operation registration methods and registers them
@@ -1569,14 +2038,26 @@ func OperationTags(tags ...string) func(o *Operation) {
 
 func convenience[I, O any](api API, method, path string, handler func(context.Context, *I) (*O, error), operationHandlers ...func(o *Operation)) {
 	var o *O
+	opID := GenerateOperationID(method, path, o)
+	opSummary := GenerateSummary(method, path, o)
 	operation := Operation{
-		OperationID: GenerateOperationID(method, path, o),
-		Summary:     GenerateSummary(method, path, o),
+		OperationID: opID,
+		Summary:     opSummary,
 		Method:      method,
 		Path:        path,
+		Metadata:    map[string]any{},
 	}
 	for _, oh := range operationHandlers {
 		oh(&operation)
+	}
+	// If not modified, hint that these were auto-generated!
+	if operation.OperationID == opID {
+		operation.Metadata["_convenience_id"] = opID
+		operation.Metadata["_convenience_id_out"] = o
+	}
+	if operation.Summary == opSummary {
+		operation.Metadata["_convenience_summary"] = opSummary
+		operation.Metadata["_convenience_summary_out"] = o
 	}
 	Register(api, operation, handler)
 }
@@ -1592,7 +2073,7 @@ func convenience[I, O any](api API, method, path string, handler func(context.Co
 //		Body []Thing
 //	}) (*ListThingOutput, error) {
 //		// TODO: list things from DB...
-//		resp := &PostThingOutput{}
+//		resp := &ListThingOutput{}
 //		resp.Body = []Thing{{ID: "1", Name: "Thing 1"}}
 //		return resp, nil
 //	})
@@ -1621,6 +2102,26 @@ func Get[I, O any](api API, path string, handler func(context.Context, *I) (*O, 
 // This is a convenience wrapper around `huma.Register`.
 func Post[I, O any](api API, path string, handler func(context.Context, *I) (*O, error), operationHandlers ...func(o *Operation)) {
 	convenience(api, http.MethodPost, path, handler, operationHandlers...)
+}
+
+// Head HTTP operation handler for an API. The handler must be a function that
+// takes a context and a pointer to the input struct and returns a pointer to the
+// output struct and an error. The input struct must be a struct with fields
+// for the request path/query/header/cookie parameters. The output struct must be a
+// struct with fields for the output headers of the operation, if any.
+//
+//	huma.Head(api, "/things/{thing-id}", func(ctx context.Context, input *struct{
+//		ID string `path:"thing-id"`
+//		Header string `header:"X-My-Header"`
+//	}) (*HeadThingOutput, error) {
+//		// TODO: get info from DB...
+//		resp := &HeadThingOutput{}
+//		return resp, nil
+//	})
+//
+// This is a convenience wrapper around `huma.Register`.
+func Head[I, O any](api API, path string, handler func(context.Context, *I) (*O, error), operationHandlers ...func(o *Operation)) {
+	convenience(api, http.MethodHead, path, handler, operationHandlers...)
 }
 
 // Put HTTP operation handler for an API. The handler must be a function that

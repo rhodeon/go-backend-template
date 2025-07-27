@@ -3,8 +3,10 @@ package huma
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"path"
 	"reflect"
+	"strings"
 )
 
 type schemaField struct {
@@ -48,7 +50,7 @@ func NewSchemaLinkTransformer(prefix, schemasPath string) *SchemaLinkTransformer
 }
 
 func (t *SchemaLinkTransformer) addSchemaField(oapi *OpenAPI, content *MediaType) bool {
-	if content == nil || content.Schema == nil || content.Schema.Ref == "" {
+	if content == nil || content.Schema == nil || content.Schema.Ref == "" || !strings.HasPrefix(content.Schema.Ref, "#/") {
 		return true
 	}
 
@@ -132,7 +134,7 @@ func (t *SchemaLinkTransformer) OnAddOperation(oapi *OpenAPI, op *Operation) {
 						// Catch some scenarios that just aren't supported in Go at the
 						// moment. Logs an error so people know what's going on.
 						// https://github.com/danielgtaylor/huma/issues/371
-						fmt.Println("Warning: unable to create schema link for type", typ, ":", r)
+						fmt.Fprintln(os.Stderr, "Warning: unable to create schema link for type", typ, ":", r)
 					}
 				}()
 				newType := reflect.StructOf(fields)

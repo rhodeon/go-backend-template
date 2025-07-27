@@ -23,6 +23,8 @@ var rxSchema = regexp.MustCompile(`#/components/schemas/([^"]+)`)
 
 var ErrUnknownContentType = errors.New("unknown content type")
 
+var ErrUnknownAcceptContentType = errors.New("unknown accept content type")
+
 // Resolver runs a `Resolve` function after a request has been parsed, enabling
 // you to run custom validation or other code that can modify the request and /
 // or return errors.
@@ -143,6 +145,12 @@ func (c subContext) Context() context.Context {
 	return c.override
 }
 
+// Unwrap returns the underlying Huma context, which enables you to access
+// the original adapter-specific request context.
+func (c subContext) Unwrap() Context {
+	return c.humaContext
+}
+
 // WithContext returns a new `huma.Context` with the underlying `context.Context`
 // replaced with the given one. This is useful for middleware that needs to
 // modify the request context.
@@ -194,6 +202,11 @@ type Config struct {
 	// does not specify one. If unset, the default type will be randomly
 	// chosen from the keys of `Formats`.
 	DefaultFormat string
+
+	// NoFormatFallback disables the fallback to application/json (if available)
+	// when the client requests an unknown content type. If set and no format is
+	// negotiated, then a 406 Not Acceptable response will be returned.
+	NoFormatFallback bool
 
 	// Transformers are a way to modify a response body before it is serialized.
 	Transformers []Transformer
@@ -296,11 +309,16 @@ func (a *api) Unmarshal(contentType string, data []byte, v any) error {
 
 func (a *api) Negotiate(accept string) (string, error) {
 	ct := negotiation.SelectQValueFast(accept, a.formatKeys)
-	if ct == "" && a.formatKeys != nil {
-		ct = a.formatKeys[0]
+	if ct == "" {
+		if a.config.NoFormatFallback {
+			return "", ErrUnknownAcceptContentType
+		}
+		if a.formatKeys != nil {
+			ct = a.formatKeys[0]
+		}
 	}
 	if _, ok := a.formats[ct]; !ok {
-		return ct, fmt.Errorf("unknown content type: %s", ct)
+		return ct, fmt.Errorf("%w: %s", ErrUnknownContentType, ct)
 	}
 	return ct, nil
 }
@@ -323,7 +341,7 @@ func (a *api) Marshal(w io.Writer, ct string, v any) error {
 		f, ok = a.formats[ct[start:]]
 	}
 	if !ok {
-		return fmt.Errorf("unknown content type: %s", ct)
+		return fmt.Errorf("%w: %s", ErrUnknownContentType, ct)
 	}
 	return f.Marshal(w, v)
 }
@@ -381,16 +399,18 @@ func NewAPI(config Config, a Adapter) API {
 		config.OpenAPI.OpenAPI = "3.1.0"
 	}
 
-	if config.OpenAPI.Components == nil {
-		config.OpenAPI.Components = &Components{}
+	if config.Components == nil {
+		config.Components = &Components{}
 	}
 
-	if config.OpenAPI.Components.Schemas == nil {
-		config.OpenAPI.Components.Schemas = NewMapRegistry("#/components/schemas/", DefaultSchemaNamer)
+	if config.Components.Schemas == nil {
+		config.Components.Schemas = NewMapRegistry("#/components/schemas/", DefaultSchemaNamer)
 	}
 
-	if config.DefaultFormat == "" && config.Formats["application/json"].Marshal != nil {
-		config.DefaultFormat = "application/json"
+	if config.DefaultFormat == "" && !config.NoFormatFallback {
+		if config.Formats["application/json"].Marshal != nil {
+			config.DefaultFormat = "application/json"
+		}
 	}
 	if config.DefaultFormat != "" {
 		newAPI.formatKeys = append(newAPI.formatKeys, config.DefaultFormat)
@@ -469,9 +489,8 @@ func NewAPI(config Config, a Adapter) API {
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>` + title + `</title>
     <!-- Embed elements Elements via Web Component -->
-    <link href="https://unpkg.com/@stoplight/elements@8.1.0/styles.min.css" rel="stylesheet" />
-    <script src="https://unpkg.com/@stoplight/elements@8.1.0/web-components.min.js"
-            integrity="sha256-985sDMZYbGa0LDS8jYmC4VbkVlh7DZ0TWejFv+raZII="
+    <link href="https://unpkg.com/@stoplight/elements@9.0.0/styles.min.css" rel="stylesheet" />
+    <script src="https://unpkg.com/@stoplight/elements@9.0.0/web-components.min.js" integrity="sha256-Tqvw1qE2abI+G6dPQBc5zbeHqfVwGoamETU3/TSpUw4="
             crossorigin="anonymous"></script>
   </head>
   <body style="height: 100vh;">
@@ -496,7 +515,7 @@ func NewAPI(config Config, a Adapter) API {
 			// Some routers dislike a path param+suffix, so we strip it here instead.
 			schema := strings.TrimSuffix(ctx.Param("schema"), ".json")
 			ctx.SetHeader("Content-Type", "application/json")
-			b, _ := json.Marshal(config.OpenAPI.Components.Schemas.Map()[schema])
+			b, _ := json.Marshal(config.Components.Schemas.Map()[schema])
 			b = rxSchema.ReplaceAll(b, []byte(config.SchemasPath+`/$1.json`))
 			ctx.BodyWriter().Write(b)
 		})

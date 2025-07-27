@@ -18,6 +18,22 @@ import (
 // form data.
 var MultipartMaxMemory int64 = 8 * 1024
 
+// Unwrap extracts the underlying HTTP request and response writer from a Huma
+// context. If passed a context from a different adapter it will panic.
+func Unwrap(ctx huma.Context) (*http.Request, http.ResponseWriter) {
+	for {
+		if c, ok := ctx.(interface{ Unwrap() huma.Context }); ok {
+			ctx = c.Unwrap()
+			continue
+		}
+		break
+	}
+	if c, ok := ctx.(*chiContext); ok {
+		return c.Unwrap()
+	}
+	panic("not a humachi context")
+}
+
 type chiContext struct {
 	op     *huma.Operation
 	r      *http.Request
@@ -27,6 +43,10 @@ type chiContext struct {
 
 // check that chiContext implements huma.Context
 var _ huma.Context = &chiContext{}
+
+func (c *chiContext) Unwrap() (*http.Request, http.ResponseWriter) {
+	return c.r, c.w
+}
 
 func (c *chiContext) Operation() *huma.Operation {
 	return c.op
@@ -53,8 +73,15 @@ func (c *chiContext) URL() url.URL {
 }
 
 func (c *chiContext) Param(name string) string {
-	// TODO: switch to c.r.PathValue when go.mod requires go >= 1.22
-	return chi.URLParam(c.r, name)
+	v := c.r.PathValue(name)
+	if c.r.URL.RawPath == "" {
+		return v // RawPath empty means no escaping was done
+	}
+	u, err := url.PathUnescape(v)
+	if err != nil {
+		return v // not supposed to happen, but if it does, return the original value
+	}
+	return u
 }
 
 func (c *chiContext) Query(name string) string {

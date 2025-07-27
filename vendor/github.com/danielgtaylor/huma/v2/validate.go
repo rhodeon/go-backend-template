@@ -35,6 +35,13 @@ const (
 	ModeWriteToServer
 )
 
+// ValidateStrictCasing controls whether or not field names are case-sensitive
+// during validation. This is useful for clients that may send fields in a
+// different case than expected by the server. For example, a legacy client may
+// send `{"Foo": "bar"}` when the server expects `{"foo": "bar"}`. This is
+// disabled by default to match Go's JSON unmarshaling behavior.
+var ValidateStrictCasing = false
+
 var rxHostname = regexp.MustCompile(`^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`)
 var rxURITemplate = regexp.MustCompile("^([^{]*({[^}]*})?)*$")
 var rxJSONPointer = regexp.MustCompile("^(?:/(?:[^~/]|~0|~1)*)*$")
@@ -117,6 +124,18 @@ func (b *PathBuffer) Pop() {
 //	pb.With("bar") // returns foo.bar
 func (b *PathBuffer) With(s string) string {
 	b.Push(s)
+	tmp := b.String()
+	b.Pop()
+	return tmp
+}
+
+// WithIndex is short for push index, convert to string, and pop. This is useful
+// when you want the location of the index given a path buffer as a prefix.
+//
+//	pb.Push("foo")
+//	pb.WithIndex(1) // return foo[1]
+func (b *PathBuffer) WithIndex(i int) string {
+	b.PushIndex(i)
 	tmp := b.String()
 	b.Pop()
 	return tmp
@@ -216,7 +235,7 @@ func validateFormat(path *PathBuffer, str string, s *Schema, res *ValidateResult
 			res.Add(path, str, ErrorFormatter(validation.MsgExpectedRFC5322Email, err))
 		}
 	case "hostname":
-		if !(rxHostname.MatchString(str) && len(str) < 256) {
+		if len(str) >= 256 || !rxHostname.MatchString(str) {
 			res.Add(path, str, validation.MsgExpectedRFC5890Hostname)
 		}
 	// TODO: proper idn-hostname support... need to figure out how.
@@ -421,8 +440,16 @@ func Validate(r Registry, s *Schema, path *PathBuffer, mode ValidateMode, v any,
 		case uint64:
 			num = float64(v)
 		default:
-			res.Add(path, v, validation.MsgExpectedNumber)
+			if s.Type == TypeInteger {
+				res.Add(path, v, validation.MsgExpectedInteger)
+			} else {
+				res.Add(path, v, validation.MsgExpectedNumber)
+			}
 			return
+		}
+
+		if s.Type == TypeInteger && num != math.Trunc(num) {
+			res.Add(path, v, validation.MsgExpectedInteger)
 		}
 
 		if s.Minimum != nil {
@@ -609,7 +636,20 @@ func handleMapString(r Registry, s *Schema, path *PathBuffer, mode ValidateMode,
 			continue
 		}
 
-		if _, ok := m[k]; !ok {
+		actualKey := k
+		_, ok := m[k]
+		if !ok && !ValidateStrictCasing {
+			for actual := range m {
+				if strings.EqualFold(actual, k) {
+					// Case-insensitive match found, so this is not an error.
+					actualKey = actual
+					ok = true
+					break
+				}
+			}
+		}
+
+		if !ok {
 			if !s.requiredMap[k] {
 				continue
 			}
@@ -622,13 +662,13 @@ func handleMapString(r Registry, s *Schema, path *PathBuffer, mode ValidateMode,
 			continue
 		}
 
-		if m[k] == nil && (!s.requiredMap[k] || s.Nullable) {
+		if m[actualKey] == nil && (!s.requiredMap[k] || s.Nullable) {
 			// This is a non-required field which is null, or a nullable field set
 			// to null, so ignore it.
 			continue
 		}
 
-		if m[k] != nil && s.DependentRequired[k] != nil {
+		if m[actualKey] != nil && s.DependentRequired[k] != nil {
 			for _, dependent := range s.DependentRequired[k] {
 				if m[dependent] != nil {
 					continue
@@ -639,14 +679,24 @@ func handleMapString(r Registry, s *Schema, path *PathBuffer, mode ValidateMode,
 		}
 
 		path.Push(k)
-		Validate(r, v, path, mode, m[k], res)
+		Validate(r, v, path, mode, m[actualKey], res)
 		path.Pop()
 	}
 
 	if addl, ok := s.AdditionalProperties.(bool); ok && !addl {
+	addlPropLoop:
 		for k := range m {
 			// No additional properties allowed.
 			if _, ok := s.Properties[k]; !ok {
+				if !ValidateStrictCasing {
+					for propName := range s.Properties {
+						if strings.EqualFold(propName, k) {
+							// Case-insensitive match found, so this is not an error.
+							continue addlPropLoop
+						}
+					}
+				}
+
 				path.Push(k)
 				res.Add(path, m, validation.MsgUnexpectedProperty)
 				path.Pop()
@@ -784,7 +834,7 @@ func handleMapAny(r Registry, s *Schema, path *PathBuffer, mode ValidateMode, m 
 //	var value any
 //	json.Unmarshal([]byte(`{"name": "abcdefg", "age": 1}`), &value)
 //
-//	validator := ModelValidator()
+//	validator := huma.NewModelValidator()
 //	errs := validator.Validate(reflect.TypeOf(MyExample{}), value)
 //	if errs != nil {
 //		fmt.Println("Validation error", errs)

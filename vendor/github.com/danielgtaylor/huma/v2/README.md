@@ -9,6 +9,7 @@
 [![HUMA Powered](https://img.shields.io/badge/Powered%20By-HUMA-f40273)](https://huma.rocks/) [![CI](https://github.com/danielgtaylor/huma/workflows/CI/badge.svg?branch=main)](https://github.com/danielgtaylor/huma/actions?query=workflow%3ACI+branch%3Amain++) [![codecov](https://codecov.io/gh/danielgtaylor/huma/branch/main/graph/badge.svg)](https://codecov.io/gh/danielgtaylor/huma) [![Docs](https://godoc.org/github.com/danielgtaylor/huma/v2?status.svg)](https://pkg.go.dev/github.com/danielgtaylor/huma/v2?tab=doc) [![Go Report Card](https://goreportcard.com/badge/github.com/danielgtaylor/huma/v2)](https://goreportcard.com/report/github.com/danielgtaylor/huma/v2)
 
 [**🌎中文文档**](./README_CN.md)
+[**🇯🇵日本語ドキュメント**](./README_JA.md)
 
 - [What is huma?](#intro)
 - [Install](#install)
@@ -86,6 +87,9 @@ A big thank you to our current & former sponsors!
 - [@victoraugustolls](https://github.com/victoraugustolls)
 - [@phoenixtechnologies-io](https://github.com/phoenixtechnologies-io)
 - [@chenjr0719](https://github.com/chenjr0719)
+- [@vinogradovkonst](https://github.com/vinogradovkonst)
+- [@miyamo2](https://github.com/miyamo2)
+- [@nielskrijger](https://github.com/nielskrijger)
 
 ## Testimonials
 
@@ -105,7 +109,7 @@ A big thank you to our current & former sponsors!
 
 # Install
 
-Install via `go get`. Note that Go 1.21 or newer is required.
+Install via `go get`. Note that Go 1.23 or newer is required.
 
 ```sh
 # After: go mod init ...
