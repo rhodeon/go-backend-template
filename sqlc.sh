@@ -34,9 +34,9 @@ queries_config=$(cat <<-END
         sql_package: "pgx/v5"
         omit_unused_structs: true
         emit_db_tags: true
-        emit_interface: true
         emit_empty_slices: true
         emit_methods_with_db_argument: true
+        emit_interface: false
         initialisms: []
 
         overrides:

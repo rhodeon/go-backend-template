@@ -10,8 +10,8 @@ import (
 )
 
 type Repository struct {
-	Users users.Querier
-	Posts posts.Querier
+	Users *users.Queries
+	Posts *posts.Queries
 }
 
 func NewRepository() *Repository {
