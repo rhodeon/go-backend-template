@@ -9,6 +9,7 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
+	"github.com/rhodeon/go-backend-template/internal/database"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
@@ -23,7 +24,13 @@ func newUsersHandler(app *internal.Application) *usersHandler {
 }
 
 func (h *usersHandler) Create(ctx context.Context, req *requests.UsersCreateRequest) (*responses.Envelope[responses.User], error) {
-	createdUser, err := h.app.Services.User.Create(ctx, h.app.DbPool, models.User{
+	dbTx, commit, rollback, err := database.BeginTransaction(ctx, h.app.DbPool)
+	if err != nil {
+		return nil, apierrors.HandleUntypedError(ctx, err)
+	}
+	defer rollback(ctx)
+
+	createdUser, err := h.app.Services.User.Create(ctx, dbTx, models.User{
 		Username: req.Body.Username,
 		Email:    req.Body.Email,
 	})
@@ -39,12 +46,22 @@ func (h *usersHandler) Create(ctx context.Context, req *requests.UsersCreateRequ
 		}
 	}
 
+	if err := commit(ctx); err != nil {
+		return nil, apierrors.HandleUntypedError(ctx, err)
+	}
+
 	responseData := responses.User(createdUser)
 	return responses.Success(responseData), nil
 }
 
 func (h *usersHandler) GetById(ctx context.Context, req *requests.UsersGetByIdRequest) (*responses.Envelope[responses.User], error) {
-	user, err := h.app.Services.User.GetById(ctx, h.app.DbPool, int32(req.Id))
+	dbTx, commit, rollback, err := database.BeginTransaction(ctx, h.app.DbPool)
+	if err != nil {
+		return nil, apierrors.HandleUntypedError(ctx, err)
+	}
+	defer rollback(ctx)
+
+	user, err := h.app.Services.User.GetById(ctx, dbTx, int32(req.Id))
 	if err != nil {
 		var notFoundErr *domainerrors.RecordNotFoundError
 
@@ -55,6 +72,10 @@ func (h *usersHandler) GetById(ctx context.Context, req *requests.UsersGetByIdRe
 		default:
 			return nil, apierrors.HandleUntypedError(ctx, err)
 		}
+	}
+
+	if err := commit(ctx); err != nil {
+		return nil, apierrors.HandleUntypedError(ctx, err)
 	}
 
 	responseData := responses.User(user)

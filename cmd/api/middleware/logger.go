@@ -10,7 +10,7 @@ import (
 // Logger embeds a logger into the context to be accessible and modified throughout the lifetime of the request.
 func Logger(app *internal.Application) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
-		loggerCtx := helpers.ContextWithLogger(ctx.Context(), app.Logger)
+		loggerCtx := helpers.ContextSetLogger(ctx.Context(), app.Logger)
 		ctx = huma.WithContext(ctx, loggerCtx)
 		next(ctx)
 	}

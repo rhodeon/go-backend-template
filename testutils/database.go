@@ -113,11 +113,11 @@ func seedData(ctx context.Context, dbPool *pgxpool.Pool) error {
 		return errors.Wrap(err, "reading database seeds directory")
 	}
 
-	dbTx, rollback, err := database.BeginTransaction(ctx, dbPool)
+	dbTx, commit, rollback, err := database.BeginTransaction(ctx, dbPool)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction to seed data")
 	}
-	defer rollback(ctx, dbTx)
+	defer rollback(ctx)
 
 	// Triggers are disabled to prevent foreign key constraints from raising an error when seeding data out of order.
 	if _, err := dbTx.Exec(ctx, "SET session_replication_role = replica"); err != nil {
@@ -172,6 +172,9 @@ func seedData(ctx context.Context, dbPool *pgxpool.Pool) error {
 		return errors.Wrap(err, "re-enabling triggers")
 	}
 
-	_ = dbTx.Commit(ctx)
+	if err := commit(ctx); err != nil {
+		return errors.Wrap(err, "committing transaction")
+	}
+
 	return nil
 }

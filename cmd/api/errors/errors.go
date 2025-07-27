@@ -64,7 +64,7 @@ func NewApiError() func(int, string, ...error) huma.StatusError {
 // Such an error could be a generic internal server error, a cancelled session, or could be due to the request timeout being exceeded.
 // A 504 Gateway Timeout (server timeout) is returned in the latter case.
 func HandleUntypedError(ctx context.Context, err error) error {
-	logger := helpers.GetContextLogger(ctx)
+	logger := helpers.ContextGetLogger(ctx)
 
 	switch {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
