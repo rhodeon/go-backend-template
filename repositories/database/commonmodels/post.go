@@ -7,9 +7,9 @@ import (
 )
 
 type Post struct {
-	ID        int32
+	Id        int32
 	Content   string
-	UserID    pgtype.Int4
+	UserId    pgtype.Int4
 	CreatedAt time.Time
 	UpdatesAt time.Time
 }

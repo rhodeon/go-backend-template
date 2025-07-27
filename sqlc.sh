@@ -37,6 +37,7 @@ queries_config=$(cat <<-END
         emit_interface: true
         emit_empty_slices: true
         emit_methods_with_db_argument: true
+        initialisms: []
 
         overrides:
           - db_type: "uuid"

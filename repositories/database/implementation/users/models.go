@@ -11,15 +11,15 @@ import (
 )
 
 type Post struct {
-	ID        int32       `db:"id"`
+	Id        int32       `db:"id"`
 	Content   string      `db:"content"`
-	UserID    pgtype.Int4 `db:"user_id"`
+	UserId    pgtype.Int4 `db:"user_id"`
 	CreatedAt time.Time   `db:"created_at"`
 	UpdatesAt time.Time   `db:"updates_at"`
 }
 
 type User struct {
-	ID        int32     `db:"id"`
+	Id        int32     `db:"id"`
 	Username  string    `db:"username"`
 	Email     string    `db:"email"`
 	CreatedAt time.Time `db:"created_at"`

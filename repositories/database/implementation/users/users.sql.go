@@ -24,7 +24,7 @@ func (q *Queries) Create(ctx context.Context, db DBTX, arg CreateParams) (User, 
 	row := db.QueryRow(ctx, create, arg.Email, arg.Username)
 	var i User
 	err := row.Scan(
-		&i.ID,
+		&i.Id,
 		&i.Username,
 		&i.Email,
 		&i.CreatedAt,
@@ -44,7 +44,7 @@ func (q *Queries) Delete(ctx context.Context, db DBTX, id int32) (User, error) {
 	row := db.QueryRow(ctx, delete, id)
 	var i User
 	err := row.Scan(
-		&i.ID,
+		&i.Id,
 		&i.Username,
 		&i.Email,
 		&i.CreatedAt,
@@ -63,7 +63,7 @@ func (q *Queries) GetById(ctx context.Context, db DBTX, id int32) (User, error) 
 	row := db.QueryRow(ctx, getById, id)
 	var i User
 	err := row.Scan(
-		&i.ID,
+		&i.Id,
 		&i.Username,
 		&i.Email,
 		&i.CreatedAt,
@@ -88,9 +88,9 @@ func (q *Queries) ListPosts(ctx context.Context, db DBTX) ([]Post, error) {
 	for rows.Next() {
 		var i Post
 		if err := rows.Scan(
-			&i.ID,
+			&i.Id,
 			&i.Content,
-			&i.UserID,
+			&i.UserId,
 			&i.CreatedAt,
 			&i.UpdatesAt,
 		); err != nil {
@@ -115,14 +115,14 @@ RETURNING id, username, email, created_at, updated_at
 type UpdateParams struct {
 	Email    string `db:"email"`
 	Username string `db:"username"`
-	ID       int32  `db:"id"`
+	Id       int32  `db:"id"`
 }
 
 func (q *Queries) Update(ctx context.Context, db DBTX, arg UpdateParams) (User, error) {
-	row := db.QueryRow(ctx, update, arg.Email, arg.Username, arg.ID)
+	row := db.QueryRow(ctx, update, arg.Email, arg.Username, arg.Id)
 	var i User
 	err := row.Scan(
-		&i.ID,
+		&i.Id,
 		&i.Username,
 		&i.Email,
 		&i.CreatedAt,

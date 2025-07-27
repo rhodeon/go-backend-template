@@ -24,9 +24,9 @@ func (q *Queries) ListAll(ctx context.Context, db DBTX) ([]Post, error) {
 	for rows.Next() {
 		var i Post
 		if err := rows.Scan(
-			&i.ID,
+			&i.Id,
 			&i.Content,
-			&i.UserID,
+			&i.UserId,
 			&i.CreatedAt,
 			&i.UpdatesAt,
 		); err != nil {
