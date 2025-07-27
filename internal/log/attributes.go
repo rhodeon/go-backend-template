@@ -6,4 +6,6 @@ const (
 	AttrErrorMsg   = "msg"
 	AttrRequestId  = "request_id"
 	AttrSignal     = "signal"
+	AttrEnv        = "env"
+	AttrPort       = "port"
 )

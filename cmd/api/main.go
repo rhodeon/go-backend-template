@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"sync"
 
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
@@ -12,11 +13,12 @@ import (
 )
 
 func main() {
+	mainCtx := context.Background()
 	cfg := internal.ParseConfig()
 	logger := log.NewLogger(cfg.DebugMode)
 
 	dbConfig := database.Config(cfg.Database)
-	dbPool, err := database.Connect(&dbConfig, logger, cfg.DebugMode)
+	dbPool, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
 	if err != nil {
 		panic(err)
 	}

@@ -25,5 +25,5 @@ There's currently an implementation of a small API, meant to show the patterns f
 
 ## Todo
 - More package-level comments.
-- Utilise more features of Huma (and OpenAPI) for a more substantial documentation.
+- Utilise more features of Huma (and OpenAPI) for more substantial documentation.
 - Integrate non-database services.

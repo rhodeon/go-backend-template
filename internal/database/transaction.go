@@ -43,7 +43,7 @@ func rollbackTransaction(tx pgx.Tx) rollbackResolver {
 	return func(ctx context.Context) {
 		// If the transaction is already closed, the error can be ignored.
 		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			helpers.ContextGetLogger(ctx).ErrorContext(ctx, "rolling back database transaction", slog.Any(log.AttrError, err))
+			helpers.ContextGetLogger(ctx).Error("Rolling back database transaction", slog.Any(log.AttrError, err))
 		}
 	}
 }

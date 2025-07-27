@@ -8,7 +8,6 @@ import (
 
 	"github.com/rhodeon/go-backend-template/cmd/migrations/internal"
 	"github.com/rhodeon/go-backend-template/internal/database"
-	"github.com/rhodeon/go-backend-template/internal/log"
 
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -56,17 +55,17 @@ func main() {
 		}
 	}
 
+	mainCtx := context.Background()
 	cfg := internal.ParseConfig()
-	logger := log.NewLogger(cfg.DebugMode)
 
 	dbConfig := database.Config(cfg.Database)
-	dbPool, err := database.Connect(&dbConfig, logger, cfg.DebugMode)
+	dbPool, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
 	if err != nil {
 		panic(err)
 	}
 
 	db := stdlib.OpenDBFromPool(dbPool)
-	if err := goose.RunWithOptionsContext(context.Background(), command, db, "./schema", gooseArgs, goose.WithAllowMissing()); err != nil {
+	if err := goose.RunWithOptionsContext(mainCtx, command, db, "./schema", gooseArgs, goose.WithAllowMissing()); err != nil {
 		panic(err)
 	}
 }

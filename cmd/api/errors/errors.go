@@ -69,17 +69,17 @@ func HandleUntypedError(ctx context.Context, err error) error {
 	switch {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
 		// If the request times out, a warning is logged. A high volume of such warning should be worth investigating.
-		logger.WarnContext(ctx, "Server timed out")
+		logger.Warn("Server timed out")
 		return huma.Error504GatewayTimeout("server timeout")
 
 	case errors.Is(err, context.Canceled):
 		// If the session is cancelled (either explicitly by the user or something else).
-		// a warning is logged. A high volume of such warning should be worth investigating.
-		logger.WarnContext(ctx, "Session cancelled")
+		// a warning is logged. A high volume of such warnings should be worth investigating.
+		logger.Warn("Session cancelled")
 		return huma.Error500InternalServerError("", err)
 
 	default:
-		logger.ErrorContext(ctx, "Internal server error", slog.Any(log.AttrError, err))
+		logger.Error("Internal server error", slog.Any(log.AttrError, err))
 		return huma.Error500InternalServerError("", err)
 	}
 }

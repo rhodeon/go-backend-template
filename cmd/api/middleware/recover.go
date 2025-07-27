@@ -15,8 +15,12 @@ func Recover(api huma.API) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		defer func() {
 			if r := recover(); r != nil {
-				logger := helpers.ContextGetLogger(ctx.Context())
-				logger.ErrorContext(ctx.Context(), fmt.Sprintf("Internal server error caused by panic: %v\n%v\n", r, string(debug.Stack())))
+				// sloglint is disabled here because of the `static-msg` rule.
+				// The stacktrace is dynamic and isn't set as a log attribute as newlines are not rendered.
+				helpers.ContextGetLogger(ctx.Context()).Error(fmt.Sprintf( //nolint: sloglint
+					"Internal server error caused by panic: %v\n%v\n",
+					r, string(debug.Stack()),
+				))
 
 				_ = huma.WriteErr(api, ctx, http.StatusInternalServerError, "")
 			}

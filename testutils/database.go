@@ -61,7 +61,7 @@ func ConnectDb(ctx context.Context) (*pgxpool.Pool, error) {
 	// A new random database is created for each test to prevent conflicts in operations.
 	dbName := "test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 
-	dbPool, err := database.Connect(config.Database, nil, false)
+	dbPool, err := database.Connect(ctx, config.Database, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "connecting to initial database")
 	}
@@ -74,7 +74,7 @@ func ConnectDb(ctx context.Context) (*pgxpool.Pool, error) {
 	testDbConfig := *config.Database
 	testDbConfig.Name = dbName
 
-	dbPool, err = database.Connect(&testDbConfig, nil, false)
+	dbPool, err = database.Connect(ctx, &testDbConfig, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "connecting to test database")
 	}

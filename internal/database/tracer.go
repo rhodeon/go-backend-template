@@ -3,21 +3,20 @@ package database
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
+
+	"github.com/rhodeon/go-backend-template/internal/helpers"
 
 	"github.com/jackc/pgx/v5"
 )
 
 // tracer implements the pgx.QueryTracer interface to provider debugging and tracing capabilities for queries.
 type tracer struct {
-	logger    *slog.Logger
 	debugMode bool
 }
 
-func newTracer(logger *slog.Logger, debugMode bool) tracer {
+func newTracer(debugMode bool) tracer {
 	return tracer{
-		logger:    logger,
 		debugMode: debugMode,
 	}
 }
@@ -25,7 +24,7 @@ func newTracer(logger *slog.Logger, debugMode bool) tracer {
 // TraceQueryStart logs each database query triggered when in debug mode.
 // The debugMode is used rather than simply calling the logger.Debug in order to
 // prevent wasting time on formatting the output when not in debug mode.
-func (t tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+func (t tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	if t.debugMode {
 		// Prevent pollution of logs with transaction boundary commands.
 		if strings.EqualFold(data.SQL, "begin") ||
@@ -34,20 +33,23 @@ func (t tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.Tr
 			strings.EqualFold(data.SQL, "end") {
 			return ctx
 		}
-		render := "\n"
+
+		formattedArgs := "\n"
 		for i, arg := range data.Args {
 			switch arg.(type) {
 			case []byte:
-				render += fmt.Sprintf("$%d:\t%s\n", i+1, arg)
+				formattedArgs += fmt.Sprintf("$%d:\t%s\n", i+1, arg)
 			default:
-				render += fmt.Sprintf("$%d:\t%v\n", i+1, arg)
+				formattedArgs += fmt.Sprintf("$%d:\t%v\n", i+1, arg)
 			}
 		}
 
-		t.logger.Info(fmt.Sprintf("Executing db query:\n%s\nargs:%s", data.SQL, render))
+		// sloglint is disabled here because of the `static-msg` rule.
+		// The queries and arguments are dynamic and aren't set as log attributes as newlines in them are not rendered.
+		helpers.ContextGetLogger(ctx).Debug(fmt.Sprintf("Executing db query:\n%s\nargs:%s", data.SQL, formattedArgs)) //nolint: sloglint
 	}
 
 	return ctx
 }
 
-func (t tracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryEndData) {}
+func (t tracer) TraceQueryEnd(_ context.Context, _ *pgx.Conn, _ pgx.TraceQueryEndData) {}

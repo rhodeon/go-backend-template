@@ -29,9 +29,9 @@ func NewLogger(debugMode bool) *slog.Logger {
 func replaceAttr(_ []string, attr slog.Attr) slog.Attr {
 	switch attr.Value.Kind() {
 	case slog.KindAny:
-		// Errors are formatted with a stacktrace.
 		switch v := attr.Value.Any().(type) {
 		case error:
+			// Errors are formatted with a stacktrace.
 			attr.Value = fmtErr(v)
 
 		default:

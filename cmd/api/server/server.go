@@ -48,8 +48,8 @@ func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, li
 	// Now the server can proceed to process connections.
 	app.Logger.Info(
 		"Starting server",
-		slog.String("env", app.Config.Environment),
-		slog.String("port", srv.Addr),
+		slog.String(log.AttrEnv, app.Config.Environment),
+		slog.String(log.AttrPort, srv.Addr),
 	)
 
 	if err := srv.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
@@ -77,7 +77,7 @@ func handleShutdown(server *http.Server, shutdownErr chan error, backgroundWg *s
 	// Wait until the quit channel is updated with a signal.
 	s := <-quit
 
-	// 20-second timeout context to delay shutdown
+	// Timeout context to delay shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), app.Config.Server.ShutdownTimeout)
 	defer cancel()
 
