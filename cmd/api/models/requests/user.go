@@ -1,14 +1,14 @@
 package requests
 
-type CreateUserRequest struct {
-	Body CreateUserRequestBody
+type UsersCreateRequest struct {
+	Body UsersCreateRequestBody
 }
 
-type CreateUserRequestBody struct {
-	Username string `json:"username" required:"true"`
-	Email    string `json:"email" required:"true" format:"email"`
+type UsersCreateRequestBody struct {
+	Username string `json:"username" required:"true" minLength:"1"`
+	Email    string `json:"email" required:"true" format:"email" minLength:"1"`
 }
 
-type GetUserRequest struct {
+type UsersGetByIdRequest struct {
 	Id int `json:"id" path:"id"`
 }

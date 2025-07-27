@@ -20,12 +20,12 @@ func TestCreateUser_success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	requestBody := requests.CreateUserRequestBody{
+	requestBody := requests.UsersCreateRequestBody{
 		Username: "johndoe",
 		Email:    "johndoe@example.com",
 	}
 
-	responseBody := responses.UserResponseBody{}
+	responseBody := responses.ResponseBody[responses.User]{}
 
 	resp, err := resty.New().
 		R().
@@ -37,8 +37,8 @@ func TestCreateUser_success(t *testing.T) {
 	}
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
-	assert.Equal(t, "johndoe", responseBody.Username)
-	assert.Equal(t, "johndoe@example.com", responseBody.Email)
+	assert.Equal(t, "johndoe", responseBody.Data.Username)
+	assert.Equal(t, "johndoe@example.com", responseBody.Data.Email)
 
 	// Confirm that the persisted details match the expected values.
 	type user struct {
@@ -48,7 +48,7 @@ func TestCreateUser_success(t *testing.T) {
 
 	var persistedUser user
 
-	// Get most recently created user.
+	// Get the most recently created user.
 	err = app.DbPool.QueryRow(context.Background(), `
 SELECT username, email 
 FROM users 
@@ -71,13 +71,13 @@ func TestCreateUser_failure(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		req            requests.CreateUserRequestBody
+		req            requests.UsersCreateRequestBody
 		respStatusCode int
 		respMessage    string
 	}{
 		{
 			name: "duplicate_email",
-			req: requests.CreateUserRequestBody{
+			req: requests.UsersCreateRequestBody{
 				Username: "johndoe",
 				Email:    "janedoe@example.com",
 			},
@@ -86,7 +86,7 @@ func TestCreateUser_failure(t *testing.T) {
 		},
 		{
 			name: "duplicate_username",
-			req: requests.CreateUserRequestBody{
+			req: requests.UsersCreateRequestBody{
 				Username: "janedoe",
 				Email:    "johndoe@example.com",
 			},
@@ -120,7 +120,7 @@ func TestGetUser_success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	responseBody := responses.UserResponseBody{}
+	responseBody := responses.ResponseBody[responses.User]{}
 
 	resp, err := resty.New().
 		R().
@@ -131,8 +131,8 @@ func TestGetUser_success(t *testing.T) {
 	}
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
-	assert.Equal(t, "janedoe@example.com", responseBody.Email)
-	assert.Equal(t, "janedoe", responseBody.Username)
+	assert.Equal(t, "janedoe@example.com", responseBody.Data.Email)
+	assert.Equal(t, "janedoe", responseBody.Data.Username)
 }
 
 func TestGetUser_failure(t *testing.T) {

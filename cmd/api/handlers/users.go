@@ -14,41 +14,49 @@ import (
 	"github.com/pkg/errors"
 )
 
-func CreateUser(app *internal.Application) func(context.Context, *requests.CreateUserRequest) (*responses.UserResponse, error) {
-	return func(ctx context.Context, req *requests.CreateUserRequest) (*responses.UserResponse, error) {
-		createdUser, err := app.Services.User.Create(ctx, app.DbPool, models.User{
-			Username: req.Body.Username,
-			Email:    req.Body.Email,
-		})
-		if err != nil {
-			var duplicateErr *domainerrors.DuplicateDataError
-			switch {
-			case errors.As(err, &duplicateErr):
-				return nil, huma.Error409Conflict(err.Error())
-
-			default:
-				return nil, apierrors.HandleUntypedError(ctx, err)
-			}
-		}
-
-		return &responses.UserResponse{Body: responses.UserResponseBody(createdUser)}, nil
-	}
+type usersHandler struct {
+	app *internal.Application
 }
 
-func GetUser(app *internal.Application) func(context.Context, *requests.GetUserRequest) (*responses.UserResponse, error) {
-	return func(ctx context.Context, req *requests.GetUserRequest) (*responses.UserResponse, error) {
-		user, err := app.Services.User.GetById(ctx, app.DbPool, int32(req.Id))
-		if err != nil {
-			var notFoundErr *domainerrors.RecordNotFoundError
-			switch {
-			case errors.As(err, &notFoundErr):
-				return nil, huma.Error404NotFound(err.Error())
+func newUsersHandler(app *internal.Application) *usersHandler {
+	return &usersHandler{app: app}
+}
 
-			default:
-				return nil, apierrors.HandleUntypedError(ctx, err)
-			}
+func (h *usersHandler) Create(ctx context.Context, req *requests.UsersCreateRequest) (*responses.Envelope[responses.User], error) {
+	createdUser, err := h.app.Services.User.Create(ctx, h.app.DbPool, models.User{
+		Username: req.Body.Username,
+		Email:    req.Body.Email,
+	})
+	if err != nil {
+		var duplicateErr *domainerrors.DuplicateDataError
+
+		switch {
+		case errors.As(err, &duplicateErr):
+			return nil, huma.Error409Conflict(err.Error())
+
+		default:
+			return nil, apierrors.HandleUntypedError(ctx, err)
 		}
-
-		return &responses.UserResponse{Body: responses.UserResponseBody(user)}, nil
 	}
+
+	responseData := responses.User(createdUser)
+	return responses.Success(responseData), nil
+}
+
+func (h *usersHandler) GetById(ctx context.Context, req *requests.UsersGetByIdRequest) (*responses.Envelope[responses.User], error) {
+	user, err := h.app.Services.User.GetById(ctx, h.app.DbPool, int32(req.Id))
+	if err != nil {
+		var notFoundErr *domainerrors.RecordNotFoundError
+
+		switch {
+		case errors.As(err, &notFoundErr):
+			return nil, huma.Error404NotFound(err.Error())
+
+		default:
+			return nil, apierrors.HandleUntypedError(ctx, err)
+		}
+	}
+
+	responseData := responses.User(user)
+	return responses.Success(responseData), nil
 }
