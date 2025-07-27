@@ -1,15 +1,15 @@
 package repositories
 
 import (
-	"github.com/rhodeon/go-backend-template/repositories/database"
+	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
 )
 
 type Repositories struct {
-	Database *database.Repository
+	Database *postgres.Repository
 }
 
 func New() *Repositories {
 	return &Repositories{
-		Database: database.NewRepository(),
+		Database: postgres.NewRepository(),
 	}
 }

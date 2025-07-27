@@ -4,13 +4,14 @@ import (
 	"context"
 	"strings"
 
+	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
+	pgusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
 	"github.com/rhodeon/go-backend-template/repositories"
-	"github.com/rhodeon/go-backend-template/repositories/database"
-	"github.com/rhodeon/go-backend-template/repositories/database/implementation/users"
 )
 
 type User struct {
@@ -24,17 +25,17 @@ func newUser(repos *repositories.Repositories) *User {
 	return userService
 }
 
-func (u User) Create(ctx context.Context, dbTx database.Transaction, user models.User) (models.User, error) {
-	dbCreatedUser, err := u.repos.Database.Users.Create(ctx, dbTx, users.CreateParams{
+func (u User) Create(ctx context.Context, dbTx postgres.Transaction, user models.User) (models.User, error) {
+	dbCreatedUser, err := u.repos.Database.Users.Create(ctx, dbTx, pgusers.CreateParams{
 		Email:    user.Email,
 		Username: user.Username,
 	})
 	if err != nil {
 		switch {
-		case strings.Contains(err.Error(), database.UniqueUsersEmail):
+		case strings.Contains(err.Error(), postgres.UniqueUsersEmail):
 			return models.User{}, domainerrors.NewDuplicateDataError("user", "email", user.Email)
 
-		case strings.Contains(err.Error(), database.UniqueUsersUsername):
+		case strings.Contains(err.Error(), postgres.UniqueUsersUsername):
 			return models.User{}, domainerrors.NewDuplicateDataError("user", "username", user.Username)
 
 		default:
@@ -45,7 +46,7 @@ func (u User) Create(ctx context.Context, dbTx database.Transaction, user models
 	return models.User{}.FromDbUser(dbCreatedUser), nil
 }
 
-func (u User) GetById(ctx context.Context, dbTx database.Transaction, userId int32) (models.User, error) {
+func (u User) GetById(ctx context.Context, dbTx postgres.Transaction, userId int32) (models.User, error) {
 	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, userId)
 	if err != nil {
 		switch {

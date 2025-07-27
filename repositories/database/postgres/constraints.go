@@ -1,4 +1,4 @@
-package database
+package postgres
 
 const (
 	// UNIQUE CONSTRAINTS

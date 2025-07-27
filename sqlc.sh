@@ -4,8 +4,8 @@
 # this script generates an sqlc config file which generates separate packages for each query file.
 # This allows for a cleaner separation between the different table queries.
 
-base_out_dir="./repositories/database/implementation"
-queries_dir="./repositories/database/queries"
+base_out_dir="./repositories/database/postgres/sqlcgen"
+queries_dir="./repositories/database/postgres/queries"
 migrations_dir="./cmd/migrations/schema"
 sqlc_config_file="sqlc.yaml"
 

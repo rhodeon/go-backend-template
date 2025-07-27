@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/rhodeon/go-backend-template/repositories/database/implementation/users"
+	pgusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
 )
 
 type User struct {
@@ -14,6 +14,6 @@ type User struct {
 	UpdatedAt time.Time
 }
 
-func (u User) FromDbUser(dbUser users.User) User {
+func (u User) FromDbUser(dbUser pgusers.User) User {
 	return User(dbUser)
 }

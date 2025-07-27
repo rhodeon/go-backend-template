@@ -1,23 +1,23 @@
-package database
+package postgres
 
 import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/rhodeon/go-backend-template/repositories/database/implementation/posts"
-	"github.com/rhodeon/go-backend-template/repositories/database/implementation/users"
+	pgposts "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/posts"
+	pgusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
 )
 
 type Repository struct {
-	Users *users.Queries
-	Posts *posts.Queries
+	Users *pgusers.Queries
+	Posts *pgposts.Queries
 }
 
 func NewRepository() *Repository {
 	return &Repository{
-		Users: users.New(),
-		Posts: posts.New(),
+		Users: pgusers.New(),
+		Posts: pgposts.New(),
 	}
 }
 
