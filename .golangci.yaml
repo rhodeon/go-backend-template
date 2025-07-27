@@ -1,3 +1,5 @@
+version: "2"
+
 run:
   timeout: 5m
   issues-exit-code: 10
@@ -5,73 +7,117 @@ run:
 output:
   show-stats: true
 
+formatters:
+  enable:
+    - gofumpt
+    - gofmt # Although gofumpt covers all gofmt format rules, gofmt is still needed for pattern replacement which gofumpt doesn't support.
+
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: 'interface{}'
+          replacement: 'any'
+
+        - pattern: 'a[b:len(a)]'
+          replacement: 'a[b:]'
+
 linters:
   enable:
-    - wrapcheck
+    - depguard
+    - errorlint
+    - gocritic
+    - govet
+    - importas
     - nilerr
     - nilnil
     - nonamedreturns
-    - gocritic
-    - depguard
-    - errorlint
+    - revive
     - sloglint
-    - importas
-    - gofumpt
-    - gofmt # Although gofumpt covers all gofmt format rules, gofmt is still needed for pattern replacement which gofumpt doesn't support.
-    - govet
+    - wrapcheck
 
-linters-settings:
-  depguard:
-    rules:
-      use_pkg_errors:
-        files:
-          - $all
-        deny:
-          - pkg: errors
-            desc: "use `github.com/pkg/errors` as it provides a stacktrace for easier pinpointing of errors"
+  settings:
+    depguard:
+      rules:
+        use_pkg_errors:
+          files:
+            - $all
+          deny:
+            - pkg: errors
+              desc: "use `github.com/pkg/errors` as it provides a stacktrace for easier pinpointing of errors"
 
-  sloglint:
-    # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
-    # https://github.com/go-simpler/sloglint?tab=readme-ov-file#attributes-only
-    # Default: false
-    attr-only: true
+    errcheck:
+      check-type-assertions: true
+      exclude-functions:
+        - (io.Closer).Close
 
-    # Enforce a single key naming convention.
-    # Values: snake, kebab, camel, pascal
-    # https://github.com/go-simpler/sloglint?tab=readme-ov-file#key-naming-convention
-    # Default: ""
-    key-naming-case: snake
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
 
-  importas:
-    # Do not allow unaliased imports of aliased packages.
-    # Default: false
-    no-unaliased: true
+    importas:
+      # Do not allow unaliased imports of aliased packages.
+      # Default: false
+      no-unaliased: true
 
-    # List of aliases
-    # Default: []
-    alias:
-      - pkg: "github.com/rhodeon/go-backend-template/cmd/api/errors"
-        alias: api_errors
+      # List of aliases
+      # Default: []
+      alias:
+        - pkg: "github.com/rhodeon/go-backend-template/cmd/api/errors"
+          alias: apierrors
 
-      - pkg: "github.com/rhodeon/go-backend-template/errors"
-        alias: domain_errors
+        - pkg: "github.com/rhodeon/go-backend-template/domain/errors"
+          alias: domainerrors
 
-    # Do not allow non-required aliases.
-    # Default: false
-    # It would be ideal to have this active, but currently enabling both no-unaliased and no-extra-aliases fails:
-    # https://github.com/julz/importas/issues/15
-    # no-extra-aliases: true
+      # Do not allow non-required aliases.
+      # Default: false
+      # It would be ideal to have this active, but currently enabling both no-unaliased and no-extra-aliases fails:
+      # https://github.com/julz/importas/issues/15
+      # no-extra-aliases: true
 
-  gofmt:
-    rewrite-rules:
-      - pattern: 'interface{}'
-        replacement: 'any'
+    revive:
+      rules:
+        - name: datarace
 
-      - pattern: 'a[b:len(a)]'
-        replacement: 'a[b:]'
+        - name: defer
 
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-      - shadow
+        - name: empty-block
+
+        - name: enforce-repeated-arg-type-style
+          arguments:
+            - "full"
+
+        - name: enforce-map-style
+          arguments:
+            - "literal"
+
+        - name: enforce-slice-style
+          arguments:
+            - "literal"
+
+        - name: import-alias-naming
+          arguments:
+            - "^[a-z][a-z0-9]{0,}$"
+
+        - name: import-shadowing
+
+        - name: redundant-import-alias
+
+        - name: time-equal
+
+    sloglint:
+      # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
+      # https://github.com/go-simpler/sloglint?tab=readme-ov-file#attributes-only
+      # Default: false
+      attr-only: true
+
+      # Enforce a single key naming convention.
+      # Values: snake, kebab, camel, pascal
+      # https://github.com/go-simpler/sloglint?tab=readme-ov-file#key-naming-convention
+      # Default: ""
+      key-naming-case: snake
+
+    wrapcheck:
+      extra-ignore-sigs:
+        - .HandleUntypedError(

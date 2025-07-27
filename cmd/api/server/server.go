@@ -42,7 +42,7 @@ func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, li
 		return errors.Wrap(err, "failed to bind to address")
 	}
 
-	listenPort <- listener.Addr().(*net.TCPAddr).Port
+	listenPort <- listener.Addr().(*net.TCPAddr).Port //nolint: errcheck
 
 	// Now the server can proceed to process connections.
 	app.Logger.Info(

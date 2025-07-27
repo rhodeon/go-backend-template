@@ -7,10 +7,10 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	api_errors "github.com/rhodeon/go-backend-template/cmd/api/errors"
+	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
-	api_middleware "github.com/rhodeon/go-backend-template/cmd/api/middleware"
+	apimiddleware "github.com/rhodeon/go-backend-template/cmd/api/middleware"
 )
 
 func routes(app *internal.Application) http.Handler {
@@ -18,14 +18,14 @@ func routes(app *internal.Application) http.Handler {
 	router.Use(middleware.Logger)
 
 	// The default error structure of huma is overwritten by a custom ApiError.
-	huma.NewError = api_errors.NewApiError()
+	huma.NewError = apierrors.NewApiError()
 
 	api := humachi.New(router, huma.DefaultConfig("API", "0.1.0"))
 	api.UseMiddleware(
-		api_middleware.Logger(app),
-		api_middleware.SetRequestId(app),
-		api_middleware.Timeout(app),
-		api_middleware.Recover(api),
+		apimiddleware.Logger(app),
+		apimiddleware.SetRequestId(app),
+		apimiddleware.Timeout(app),
+		apimiddleware.Recover(api),
 	)
 
 	huma.Register(

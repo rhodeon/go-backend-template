@@ -15,11 +15,11 @@ type Application struct {
 	Services *services.Services
 }
 
-func NewApplication(cfg *Config, logger *slog.Logger, dbPool *pgxpool.Pool, services *services.Services) *Application {
+func NewApplication(cfg *Config, logger *slog.Logger, dbPool *pgxpool.Pool, svcs *services.Services) *Application {
 	return &Application{
 		Config:   cfg,
 		Logger:   logger,
 		DbPool:   dbPool,
-		Services: services,
+		Services: svcs,
 	}
 }

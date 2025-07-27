@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/rhodeon/go-backend-template/testutils"
+
 	"github.com/go-resty/resty/v2"
-	api_errors "github.com/rhodeon/go-backend-template/cmd/api/errors"
+	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/requests"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
-	"github.com/rhodeon/go-backend-template/test_utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +31,7 @@ func TestCreateUser_success(t *testing.T) {
 		R().
 		SetResult(&responseBody).
 		SetBody(requestBody).
-		Post(test_utils.JoinUrlPath(app.Config.Server.BaseUrl + "/users"))
+		Post(testutils.JoinUrlPath(app.Config.Server.BaseUrl + "/users"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,13 +97,13 @@ func TestCreateUser_failure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			responseError := api_errors.ApiError{}
+			responseError := apierrors.ApiError{}
 
 			resp, err := resty.New().
 				R().
 				SetBody(tc.req).
 				SetError(&responseError).
-				Post(test_utils.JoinUrlPath(app.Config.Server.BaseUrl + "/users"))
+				Post(testutils.JoinUrlPath(app.Config.Server.BaseUrl + "/users"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -124,7 +125,7 @@ func TestGetUser_success(t *testing.T) {
 	resp, err := resty.New().
 		R().
 		SetResult(&responseBody).
-		Get(test_utils.JoinUrlPath(app.Config.Server.BaseUrl, "users", "1"))
+		Get(testutils.JoinUrlPath(app.Config.Server.BaseUrl, "users", "1"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,12 +157,12 @@ func TestGetUser_failure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			responseError := api_errors.ApiError{}
+			responseError := apierrors.ApiError{}
 
 			resp, err := resty.New().
 				R().
 				SetError(&responseError).
-				Get(test_utils.JoinUrlPath(app.Config.Server.BaseUrl, "users", tc.reqUserId))
+				Get(testutils.JoinUrlPath(app.Config.Server.BaseUrl, "users", tc.reqUserId))
 			if err != nil {
 				t.Fatal(err)
 			}

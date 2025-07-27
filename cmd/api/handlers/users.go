@@ -5,11 +5,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
-	api_errors "github.com/rhodeon/go-backend-template/cmd/api/errors"
+	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/requests"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
-	domain_errors "github.com/rhodeon/go-backend-template/domain/errors"
+	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
 )
 
@@ -20,13 +20,13 @@ func CreateUser(app *internal.Application) func(context.Context, *requests.Creat
 			Email:    req.Body.Email,
 		})
 		if err != nil {
-			var duplicateErr *domain_errors.DuplicateDataError
+			var duplicateErr *domainerrors.DuplicateDataError
 			switch {
 			case errors.As(err, &duplicateErr):
 				return nil, huma.Error409Conflict(err.Error())
 
 			default:
-				return nil, api_errors.HandleUntypedError(ctx, err)
+				return nil, apierrors.HandleUntypedError(ctx, err)
 			}
 		}
 
@@ -38,13 +38,13 @@ func GetUser(app *internal.Application) func(context.Context, *requests.GetUserR
 	return func(ctx context.Context, req *requests.GetUserRequest) (*responses.UserResponse, error) {
 		user, err := app.Services.User.GetById(ctx, app.DbPool, int32(req.Id))
 		if err != nil {
-			var notFoundErr *domain_errors.RecordNotFoundError
+			var notFoundErr *domainerrors.RecordNotFoundError
 			switch {
 			case errors.As(err, &notFoundErr):
 				return nil, huma.Error404NotFound(err.Error())
 
 			default:
-				return nil, api_errors.HandleUntypedError(ctx, err)
+				return nil, apierrors.HandleUntypedError(ctx, err)
 			}
 		}
 

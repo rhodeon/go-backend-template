@@ -7,12 +7,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rhodeon/go-backend-template/testutils"
+
 	"github.com/pkg/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/server"
 	"github.com/rhodeon/go-backend-template/domain/services"
 	"github.com/rhodeon/go-backend-template/repositories"
-	"github.com/rhodeon/go-backend-template/test_utils"
 )
 
 // spawnServer sets up a server and data common to all tests in the package.
@@ -33,13 +34,13 @@ func spawnServer() (*internal.Application, error) {
 	}
 
 	repos := repositories.New()
-	services := services.New(repos)
-	dbPool, err := test_utils.ConnectDb(context.Background())
+	svcs := services.New(repos)
+	dbPool, err := testutils.ConnectDb(context.Background())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect database")
 	}
 
-	app := internal.NewApplication(config, slog.Default(), dbPool, services)
+	app := internal.NewApplication(config, slog.Default(), dbPool, svcs)
 	listenChan := make(chan int, 1)
 
 	go func() {

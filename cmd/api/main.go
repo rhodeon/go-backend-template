@@ -22,9 +22,9 @@ func main() {
 	}
 
 	repos := repositories.New()
-	services := services.New(repos)
+	svcs := services.New(repos)
 
-	app := internal.NewApplication(cfg, logger, dbPool, services)
+	app := internal.NewApplication(cfg, logger, dbPool, svcs)
 
 	// A waitgroup is established to ensure background tasks are completed before shutting down the server.
 	backgroundWg := &sync.WaitGroup{}

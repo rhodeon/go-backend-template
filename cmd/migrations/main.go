@@ -7,12 +7,10 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 	"github.com/rhodeon/go-backend-template/cmd/migrations/internal"
 	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/internal/log"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
 )
 
 const usageText = `This program runs command on the db. Supported commands are:

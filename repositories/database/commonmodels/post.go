@@ -1,4 +1,4 @@
-package common_models
+package commonmodels
 
 import (
 	"time"
