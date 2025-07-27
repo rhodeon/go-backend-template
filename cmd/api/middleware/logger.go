@@ -7,8 +7,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-// Logger embeds a logger into the context to be accessible and modified throughout the lifetime of the request.
-func Logger(app *internal.Application) func(huma.Context, func(huma.Context)) {
+// SetLogger embeds a logger into the context to be accessible and modified throughout the lifetime of the request.
+func SetLogger(app *internal.Application) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		loggerCtx := helpers.ContextSetLogger(ctx.Context(), app.Logger)
 		ctx = huma.WithContext(ctx, loggerCtx)
