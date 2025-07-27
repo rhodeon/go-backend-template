@@ -4,11 +4,12 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/rhodeon/go-backend-template/internal/helpers"
+	"github.com/rhodeon/go-backend-template/internal/log"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
-	"github.com/rhodeon/go-backend-template/internal/helpers"
-	"github.com/rhodeon/go-backend-template/internal/log"
 )
 
 // BeginTransaction starts a transaction and returns the new transaction along with the rollback function to be deferred.

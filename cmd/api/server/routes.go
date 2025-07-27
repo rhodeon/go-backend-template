@@ -3,14 +3,15 @@ package server
 import (
 	"net/http"
 
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humachi"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	apimiddleware "github.com/rhodeon/go-backend-template/cmd/api/middleware"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humachi"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func routes(app *internal.Application) http.Handler {

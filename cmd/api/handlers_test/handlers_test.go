@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rhodeon/go-backend-template/testutils"
-
-	"github.com/pkg/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/server"
 	"github.com/rhodeon/go-backend-template/domain/services"
 	"github.com/rhodeon/go-backend-template/repositories"
+	"github.com/rhodeon/go-backend-template/testutils"
+
+	"github.com/pkg/errors"
 )
 
 // spawnServer sets up a server and data common to all tests in the package.

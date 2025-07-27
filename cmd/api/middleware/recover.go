@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/danielgtaylor/huma/v2"
 	"github.com/rhodeon/go-backend-template/internal/helpers"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
 // Recover logs any existing panics then writes an internal server error to the response.

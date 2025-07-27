@@ -3,10 +3,11 @@ package postgres
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	pgposts "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/posts"
 	pgusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Repository struct {

@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/rhodeon/go-backend-template/testutils"
-
-	"github.com/go-resty/resty/v2"
 	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/requests"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
+	"github.com/rhodeon/go-backend-template/testutils"
+
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 )
 

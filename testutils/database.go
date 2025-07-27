@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rhodeon/go-backend-template/internal/database"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
-	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"

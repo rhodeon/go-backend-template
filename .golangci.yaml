@@ -9,10 +9,19 @@ output:
 
 formatters:
   enable:
-    - gofumpt
+    - gci
     - gofmt # Although gofumpt covers all gofmt format rules, gofmt is still needed for pattern replacement which gofumpt doesn't support.
+    - gofumpt
 
   settings:
+    gci:
+      sections:
+        - standard
+        - localmodule
+        - default
+
+      custom-order: true
+
     gofmt:
       rewrite-rules:
         - pattern: 'interface{}'

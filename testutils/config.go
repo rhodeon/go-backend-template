@@ -3,10 +3,11 @@ package testutils
 import (
 	"path"
 
+	"github.com/rhodeon/go-backend-template/internal/database"
+
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
-	"github.com/rhodeon/go-backend-template/internal/database"
 )
 
 type Config struct {

@@ -3,8 +3,9 @@ package internal
 import (
 	"log/slog"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rhodeon/go-backend-template/domain/services"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Application houses common resources used at various points in the API as a means of dependency injection.

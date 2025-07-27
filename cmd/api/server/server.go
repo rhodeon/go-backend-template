@@ -11,9 +11,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/pkg/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/internal/log"
+
+	"github.com/pkg/errors"
 )
 
 // ServeApi starts up a server with the app data.

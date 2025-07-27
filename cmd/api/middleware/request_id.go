@@ -5,11 +5,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/google/uuid"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/internal/helpers"
 	"github.com/rhodeon/go-backend-template/internal/log"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 )
 
 // SetRequestId adds a unique ID to identify and filter the request logs and metrics.

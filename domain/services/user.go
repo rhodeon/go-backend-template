@@ -4,14 +4,14 @@ import (
 	"context"
 	"strings"
 
+	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
+	"github.com/rhodeon/go-backend-template/domain/models"
+	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
 	pgusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
-	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
-	"github.com/rhodeon/go-backend-template/domain/models"
-	"github.com/rhodeon/go-backend-template/repositories"
 )
 
 type User struct {

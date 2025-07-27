@@ -3,14 +3,15 @@ package handlers
 import (
 	"context"
 
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/pkg/errors"
 	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/requests"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/pkg/errors"
 )
 
 func CreateUser(app *internal.Application) func(context.Context, *requests.CreateUserRequest) (*responses.UserResponse, error) {

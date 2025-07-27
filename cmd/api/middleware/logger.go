@@ -1,9 +1,10 @@
 package middleware
 
 import (
-	"github.com/danielgtaylor/huma/v2"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/internal/helpers"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
 // Logger embeds a logger into the context to be accessible and modified throughout the lifetime of the request.
