@@ -14,15 +14,14 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func routes(app *internal.Application) http.Handler {
-	h := handlers.New(app)
-	router := chi.NewMux()
-	router.Use(middleware.Logger)
+func router(app *internal.Application) http.Handler {
+	mux := chi.NewMux()
+	mux.Use(middleware.Logger)
 
 	// The default error structure of huma is overwritten by a custom ApiError.
 	huma.NewError = apierrors.NewApiError()
 
-	api := humachi.New(router, huma.DefaultConfig("API", "0.1.0"))
+	api := humachi.New(mux, huma.DefaultConfig("API", "0.1.0"))
 	api.UseMiddleware(
 		apimiddleware.SetLogger(app),
 		apimiddleware.SetRequestId(app),
@@ -30,47 +29,12 @@ func routes(app *internal.Application) http.Handler {
 		apimiddleware.Recover(api),
 	)
 
-	{
-		huma.Register(
-			api,
-			huma.Operation{
-				OperationID: "ping",
-				Method:      http.MethodGet,
-				Path:        "/ping",
-				Tags:        []string{"misc"},
-				Description: "Acknowledges that the server is reachable.",
-			},
-			h.Ping,
-		)
+	api.OpenAPI().Tags = []*huma.Tag{
+		{Name: "misc"},
+		{Name: "user"},
+		{Name: "store"},
 	}
 
-	{
-		usersGroup := huma.NewGroup(api, "/users")
-
-		huma.Register(
-			usersGroup,
-			huma.Operation{
-				OperationID: "users-create",
-				Method:      http.MethodPost,
-				Path:        "",
-				Tags:        []string{"users"},
-				Description: "Creates a new user.",
-			},
-			h.Users.Create,
-		)
-
-		huma.Register(
-			usersGroup,
-			huma.Operation{
-				OperationID: "users-get-by-id",
-				Method:      http.MethodGet,
-				Path:        "/{id}",
-				Tags:        []string{"users"},
-				Description: "Returns a user with the given id.",
-			},
-			h.Users.GetById,
-		)
-	}
-
-	return router
+	handlers.Setup(app, api)
+	return mux
 }

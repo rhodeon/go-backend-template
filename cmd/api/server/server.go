@@ -22,14 +22,14 @@ import (
 // This is useful to guarantee the server is active before proceeding. e.g. for tests.
 func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, listenPort chan<- int) error {
 	serverConfig := app.Config.Server
-	router := routes(app)
+	rtr := router(app)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", serverConfig.HttpPort),
 		IdleTimeout:  serverConfig.IdleTimeout,
 		ReadTimeout:  serverConfig.ReadTimeout,
 		WriteTimeout: serverConfig.WriteTimeout,
-		Handler:      router,
+		Handler:      rtr,
 	}
 
 	// Start a background goroutine to intercept and handle shutdown events.

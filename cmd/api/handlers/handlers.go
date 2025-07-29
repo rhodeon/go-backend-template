@@ -1,15 +1,41 @@
 package handlers
 
-import "github.com/rhodeon/go-backend-template/cmd/api/internal"
+import (
+	"net/http"
+
+	"github.com/rhodeon/go-backend-template/cmd/api/handlers/store"
+	"github.com/rhodeon/go-backend-template/cmd/api/handlers/users"
+	"github.com/rhodeon/go-backend-template/cmd/api/internal"
+
+	"github.com/danielgtaylor/huma/v2"
+)
 
 type Handlers struct {
-	*baseHandler
-	Users *usersHandler
+	app   *internal.Application
+	Store *store.Handlers
+	Users *users.Handlers
 }
 
-func New(app *internal.Application) *Handlers {
-	return &Handlers{
-		newBaseHandler(app),
-		newUsersHandler(app),
+func Setup(app *internal.Application, api huma.API) {
+	handlers := &Handlers{
+		app,
+		store.New(app, api),
+		users.New(app, api),
 	}
+
+	handlers.registerRoutes(api)
+}
+
+func (h *Handlers) registerRoutes(api huma.API) {
+	huma.Register(
+		api,
+		huma.Operation{
+			OperationID: "ping",
+			Method:      http.MethodGet,
+			Path:        "/ping",
+			Tags:        []string{"misc"},
+			Description: "Acknowledges that the server is reachable.",
+		},
+		h.Ping,
+	)
 }
