@@ -1,11 +1,15 @@
 package orders
 
-import "context"
+import (
+	"context"
+
+	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
+)
 
 type GetByIdRequest struct {
-	Id string `path:"id"`
+	OrderId string `path:"order_id"`
 }
 
-func (h *Handlers) GetById(ctx context.Context, req *GetByIdRequest) (*struct{}, error) {
-	return nil, nil
+func (h *Handlers) GetById(_ context.Context, _ *GetByIdRequest) (*responses.Envelope[responses.Order], error) {
+	return responses.Success(responses.Order{}), nil
 }

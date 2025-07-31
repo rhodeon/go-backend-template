@@ -6,6 +6,6 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 )
 
-func (h *Handlers) Ping(_ context.Context, _ *struct{}) (*responses.Envelope[string], error) {
-	return responses.Success(responses.SuccessMessage), nil
+func (h *Handlers) Ping(_ context.Context, _ *struct{}) (*responses.Envelope[responses.SuccessMessageResponseData], error) {
+	return responses.Success(responses.SuccessMessageResponseData("Success")), nil
 }

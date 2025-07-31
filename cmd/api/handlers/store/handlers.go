@@ -19,7 +19,7 @@ func New(app *internal.Application, api huma.API) *Handlers {
 
 	handler := &Handlers{
 		app,
-		orders.New(app, api),
+		orders.New(app, group),
 	}
 
 	handler.registerRoutes(group)

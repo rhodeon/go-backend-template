@@ -78,12 +78,25 @@ func (h *Handlers) registerRoutes(api huma.API) {
 		huma.Operation{
 			OperationID: "users-get-by-id",
 			Method:      http.MethodGet,
-			Path:        "/{id}",
+			Path:        "/{user_id}",
 			Tags:        []string{"users"},
 			Summary:     "Get user by id",
 			Description: "Get user detail based on id.",
 		},
 		h.GetById,
+	)
+
+	huma.Register(
+		api,
+		huma.Operation{
+			OperationID: "users-get-by-username",
+			Method:      http.MethodGet,
+			Path:        "/{username}",
+			Tags:        []string{"users"},
+			Summary:     "Get user by username",
+			Description: "Get user detail based on username.",
+		},
+		h.GetByUsername,
 	)
 
 	huma.Register(

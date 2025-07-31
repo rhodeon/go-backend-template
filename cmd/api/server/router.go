@@ -3,7 +3,6 @@ package server
 import (
 	"net/http"
 
-	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	apimiddleware "github.com/rhodeon/go-backend-template/cmd/api/middleware"
@@ -18,10 +17,9 @@ func router(app *internal.Application) http.Handler {
 	mux := chi.NewMux()
 	mux.Use(middleware.Logger)
 
-	// The default error structure of huma is overwritten by a custom ApiError.
-	huma.NewError = apierrors.NewApiError()
+	humaConfig := newHumaConfig("API", "0.1.0")
+	api := humachi.New(mux, humaConfig)
 
-	api := humachi.New(mux, huma.DefaultConfig("API", "0.1.0"))
 	api.UseMiddleware(
 		apimiddleware.SetLogger(app),
 		apimiddleware.SetRequestId(app),
