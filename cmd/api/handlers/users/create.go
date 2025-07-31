@@ -19,6 +19,10 @@ type CreateRequestBody struct {
 	Password  string `json:"password" required:"true"`
 }
 
-func (h *Handlers) Create(_ context.Context, _ *CreateRequest) (*responses.Envelope[responses.User], error) {
-	return responses.Success(responses.User{}), nil
+type CreateResponse struct {
+	Body responses.Envelope[responses.User]
+}
+
+func (h *Handlers) Create(_ context.Context, _ *CreateRequest) (*CreateResponse, error) {
+	return &CreateResponse{}, nil
 }

@@ -7,9 +7,13 @@ import (
 )
 
 type GetByIdRequest struct {
-	OrderId string `path:"order_id"`
+	OrderId int `path:"order_id"`
 }
 
-func (h *Handlers) GetById(_ context.Context, _ *GetByIdRequest) (*responses.Envelope[responses.Order], error) {
-	return responses.Success(responses.Order{}), nil
+type GetByIdResponse struct {
+	Body responses.Envelope[responses.Order]
+}
+
+func (h *Handlers) GetById(_ context.Context, _ *GetByIdRequest) (*GetByIdResponse, error) {
+	return &GetByIdResponse{}, nil
 }

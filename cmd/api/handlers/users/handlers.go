@@ -104,7 +104,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 		huma.Operation{
 			OperationID: "users-update-by-id",
 			Method:      http.MethodPut,
-			Path:        "/{id}",
+			Path:        "/{user_id}",
 			Tags:        []string{"users"},
 			Summary:     "Update user resource",
 			Description: "This can only be done by the logged in user.",

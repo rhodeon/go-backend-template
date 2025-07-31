@@ -7,9 +7,15 @@ import (
 )
 
 type GetByIdRequest struct {
-	UserId string `path:"user_id"`
+	UserId int `path:"user_id"`
 }
 
-func (h *Handlers) GetById(_ context.Context, _ *struct{}) (*responses.Envelope[responses.User], error) {
-	return responses.Success(responses.User{}), nil
+type GetByIdResponse struct {
+	Body responses.Envelope[responses.User]
+}
+
+func (h *Handlers) GetById(_ context.Context, _ *struct{}) (*GetByIdResponse, error) {
+	return &GetByIdResponse{
+		Body: responses.Success(responses.User{}),
+	}, nil
 }

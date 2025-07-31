@@ -10,7 +10,3 @@ type Order struct {
 	Status   string    `json:"status" enum:"placed,approved,delivered" required:"true"`
 	Complete bool      `json:"complete" required:"true"`
 }
-
-func (o Order) Name() string {
-	return "Order"
-}

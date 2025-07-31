@@ -2,8 +2,8 @@ package users
 
 import (
 	"context"
+	"time"
 
-	handlerutils "github.com/rhodeon/go-backend-template/cmd/api/handlers/utils"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 )
 
@@ -16,11 +16,16 @@ type LoginRequestBody struct {
 	Password string `json:"password"`
 }
 
-func (rb LoginRequestBody) Name() string {
-	return handlerutils.GenerateSchemaName(rb)
+type LoginResponse struct {
+	Body          responses.Envelope[responses.SuccessMessage]
+	XRateLimit    int    `header:"X-Rate-Limit" doc:"Calls per hour allowed by the user."`
+	XExpiresAfter string `header:"X-Expires-After" doc:"Date in UTC when token expires."`
 }
 
-// TODO: Add response headers.
-func (h *Handlers) Login(_ context.Context, _ *struct{}) (*responses.Envelope[responses.SuccessMessageResponseData], error) {
-	return responses.Success(responses.SuccessMessageResponseData("Success")), nil
+func (h *Handlers) Login(_ context.Context, _ *struct{}) (*LoginResponse, error) {
+	return &LoginResponse{
+		Body:          responses.Success(responses.SuccessMessage("Success")),
+		XRateLimit:    10,
+		XExpiresAfter: time.Now().UTC().String(),
+	}, nil
 }

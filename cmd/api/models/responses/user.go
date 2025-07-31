@@ -8,7 +8,3 @@ type User struct {
 	Email     string `json:"email" required:"true" example:"johndoe@example.com"`
 	Phone     string `json:"phone" required:"false"`
 }
-
-func (p User) Name() string {
-	return "User"
-}

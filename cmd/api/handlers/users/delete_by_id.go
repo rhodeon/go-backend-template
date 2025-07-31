@@ -7,9 +7,15 @@ import (
 )
 
 type DeleteByIdRequest struct {
-	UserId string `path:"user_id"`
+	UserId int `path:"user_id"`
 }
 
-func (h *Handlers) DeleteById(_ context.Context, _ *DeleteByIdRequest) (*responses.Envelope[responses.SuccessMessageResponseData], error) {
-	return responses.Success(responses.SuccessMessageResponseData("User deleted")), nil
+type DeleteByIdResponse struct {
+	Body responses.Envelope[responses.SuccessMessage]
+}
+
+func (h *Handlers) DeleteById(_ context.Context, _ *DeleteByIdRequest) (*DeleteByIdResponse, error) {
+	return &DeleteByIdResponse{
+		Body: responses.Success[responses.SuccessMessage]("User deleted"),
+	}, nil
 }

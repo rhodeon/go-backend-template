@@ -10,6 +10,10 @@ type GetByUsernameRequest struct {
 	Username string `path:"username"`
 }
 
-func (h *Handlers) GetByUsername(_ context.Context, _ *struct{}) (*responses.Envelope[responses.User], error) {
-	return responses.Success(responses.User{}), nil
+type GetByUsernameResponse struct {
+	Body responses.Envelope[responses.User]
+}
+
+func (h *Handlers) GetByUsername(_ context.Context, _ *struct{}) (*GetByUsernameResponse, error) {
+	return &GetByUsernameResponse{}, nil
 }
