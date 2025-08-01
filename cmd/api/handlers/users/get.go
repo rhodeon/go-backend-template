@@ -6,16 +6,16 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 )
 
-type GetByIdRequest struct {
+type GetRequest struct {
 	UserId int `path:"user_id"`
 }
 
-type GetByIdResponse struct {
+type GetResponse struct {
 	Body responses.Envelope[responses.User]
 }
 
-func (h *Handlers) GetById(_ context.Context, _ *struct{}) (*GetByIdResponse, error) {
-	return &GetByIdResponse{
+func (h *Handlers) Get(_ context.Context, _ *GetRequest) (*GetResponse, error) {
+	return &GetResponse{
 		Body: responses.Success(responses.User{}),
 	}, nil
 }

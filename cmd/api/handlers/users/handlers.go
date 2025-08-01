@@ -76,52 +76,39 @@ func (h *Handlers) registerRoutes(api huma.API) {
 	huma.Register(
 		api,
 		huma.Operation{
-			OperationID: "users-get-by-id",
+			OperationID: "users-get",
 			Method:      http.MethodGet,
 			Path:        "/{user_id}",
 			Tags:        []string{"users"},
 			Summary:     "Get user by id",
 			Description: "Get user detail based on id.",
 		},
-		h.GetById,
+		h.Get,
 	)
 
 	huma.Register(
 		api,
 		huma.Operation{
-			OperationID: "users-get-by-username",
-			Method:      http.MethodGet,
-			Path:        "/{username}",
-			Tags:        []string{"users"},
-			Summary:     "Get user by username",
-			Description: "Get user detail based on username.",
-		},
-		h.GetByUsername,
-	)
-
-	huma.Register(
-		api,
-		huma.Operation{
-			OperationID: "users-update-by-id",
+			OperationID: "users-update",
 			Method:      http.MethodPut,
 			Path:        "/{user_id}",
 			Tags:        []string{"users"},
 			Summary:     "Update user resource",
 			Description: "This can only be done by the logged in user.",
 		},
-		h.UpdateById,
+		h.Update,
 	)
 
 	huma.Register(
 		api,
 		huma.Operation{
-			OperationID: "users-delete-by-id",
+			OperationID: "users-delete",
 			Method:      http.MethodPost,
-			Path:        "/{id}",
+			Path:        "/{user_id}",
 			Tags:        []string{"users"},
 			Summary:     "Delete user resource",
 			Description: "This can only be done by the logged in user.",
 		},
-		h.DeleteById,
+		h.Delete,
 	)
 }

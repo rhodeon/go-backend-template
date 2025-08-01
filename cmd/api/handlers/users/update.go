@@ -6,12 +6,12 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 )
 
-type UpdateByIdRequest struct {
-	Body   UpdateByIdRequestBody
+type UpdateRequest struct {
+	Body   UpdateRequestBody
 	UserId int `path:"user_id"`
 }
 
-type UpdateByIdRequestBody struct {
+type UpdateRequestBody struct {
 	Username  string `json:"username" required:"true" example:"johndoe"`
 	FirstName string `json:"first_name" required:"true" example:"John"`
 	LastName  string `json:"last_name" required:"true" example:"Doe"`
@@ -19,10 +19,10 @@ type UpdateByIdRequestBody struct {
 	Phone     string `json:"phone" required:"false"`
 	Password  string `json:"password" required:"true"`
 }
-type UpdateByIdResponse struct {
+type UpdateResponse struct {
 	Body responses.Envelope[responses.User]
 }
 
-func (h *Handlers) UpdateById(_ context.Context, _ *UpdateByIdRequest) (*UpdateByIdResponse, error) {
-	return &UpdateByIdResponse{}, nil
+func (h *Handlers) Update(_ context.Context, _ *UpdateRequest) (*UpdateResponse, error) {
+	return &UpdateResponse{}, nil
 }

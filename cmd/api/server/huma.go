@@ -39,7 +39,7 @@ func (r *CustomRegistry) Schema(t reflect.Type, allowRef bool, hint string) *hum
 
 	if _, ok := v.(common.InlinedSchema); ok ||
 		// Types defined in the `handlers` package are tied to a specific handler and are inlined into its endpoint's definition.
-		strings.Contains(t.PkgPath(), "/handlers/") {
+		strings.Contains(t.PkgPath(), "/handlers") {
 		return huma.SchemaFromType(r, t)
 	}
 

@@ -38,14 +38,14 @@ func (h *Handlers) registerRoutes(api huma.API) {
 	huma.Register(
 		api,
 		huma.Operation{
-			OperationID: "store-orders-get-by-id",
+			OperationID: "store-orders-get",
 			Method:      http.MethodGet,
 			Path:        "/{order_id}",
 			Tags:        []string{"store"},
 			Description: "For valid response try integer IDs with value <= 5 or > 10. Other values will generate exceptions.",
 			Summary:     "Find purchase order by ID",
 		},
-		h.GetById,
+		h.Get,
 	)
 
 	huma.Register(
@@ -58,6 +58,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Description: "For valid response try integer IDs with value < 1000. Anything above 1000 or non-integers will generate API errors.",
 			Summary:     "Delete purchase order by identifier",
 		},
-		h.DeleteById,
+		h.Delete,
 	)
 }

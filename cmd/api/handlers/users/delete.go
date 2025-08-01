@@ -6,16 +6,16 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 )
 
-type DeleteByIdRequest struct {
+type DeleteRequest struct {
 	UserId int `path:"user_id"`
 }
 
-type DeleteByIdResponse struct {
+type DeleteResponse struct {
 	Body responses.Envelope[responses.SuccessMessage]
 }
 
-func (h *Handlers) DeleteById(_ context.Context, _ *DeleteByIdRequest) (*DeleteByIdResponse, error) {
-	return &DeleteByIdResponse{
+func (h *Handlers) Delete(_ context.Context, _ *DeleteRequest) (*DeleteResponse, error) {
+	return &DeleteResponse{
 		Body: responses.Success[responses.SuccessMessage]("User deleted"),
 	}, nil
 }
