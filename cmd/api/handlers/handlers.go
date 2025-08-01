@@ -11,25 +11,25 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-type Handlers struct {
+type handlers struct {
 	app   *internal.Application
-	Store *store.Handlers
-	Users *users.Handlers
-	Pets  *pets.Handlers
+	store *store.Handlers
+	users *users.Handlers
+	pets  *pets.Handlers
 }
 
 func Setup(app *internal.Application, api huma.API) {
-	handlers := &Handlers{
+	h := &handlers{
 		app,
 		store.New(app, api),
 		users.New(app, api),
 		pets.New(app, api),
 	}
 
-	handlers.registerRoutes(api)
+	h.registerRoutes(api)
 }
 
-func (h *Handlers) registerRoutes(api huma.API) {
+func (h *handlers) registerRoutes(api huma.API) {
 	huma.Register(
 		api,
 		huma.Operation{
@@ -39,6 +39,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Tags:        []string{"misc"},
 			Description: "Acknowledges that the server is reachable.",
 		},
-		h.Ping,
+		h.ping,
 	)
 }

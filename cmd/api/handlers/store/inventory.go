@@ -10,7 +10,7 @@ type InventoryResponse struct {
 	Body responses.Envelope[map[string]string]
 }
 
-func (h *Handlers) Inventory(_ context.Context, _ *struct{}) (*InventoryResponse, error) {
+func (h *Handlers) inventory(_ context.Context, _ *struct{}) (*InventoryResponse, error) {
 	return &InventoryResponse{
 		Body: responses.Success(map[string]string{}),
 	}, nil

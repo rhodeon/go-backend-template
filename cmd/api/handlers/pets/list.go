@@ -15,7 +15,7 @@ type ListResponse struct {
 	Body responses.EnvelopeWithMetadata[[]responses.Pet, *responses.Pagination]
 }
 
-func (h *Handlers) List(_ context.Context, _ *ListRequest) (*ListResponse, error) {
+func (h *Handlers) list(_ context.Context, _ *ListRequest) (*ListResponse, error) {
 	return &ListResponse{
 		Body: responses.SuccessWithMetadata(
 			[]responses.Pet{},

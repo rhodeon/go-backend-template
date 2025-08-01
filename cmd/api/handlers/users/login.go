@@ -22,7 +22,7 @@ type LoginResponse struct {
 	XExpiresAfter string `header:"X-Expires-After" doc:"Date in UTC when token expires."`
 }
 
-func (h *Handlers) Login(_ context.Context, _ *struct{}) (*LoginResponse, error) {
+func (h *Handlers) login(_ context.Context, _ *struct{}) (*LoginResponse, error) {
 	return &LoginResponse{
 		Body:          responses.Success(responses.SuccessMessage("Success")),
 		XRateLimit:    10,

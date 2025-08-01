@@ -14,7 +14,7 @@ type GetResponse struct {
 	Body responses.Envelope[responses.Pet]
 }
 
-func (h *Handlers) Get(_ context.Context, _ *GetRequest) (*GetResponse, error) {
+func (h *Handlers) get(_ context.Context, _ *GetRequest) (*GetResponse, error) {
 	return &GetResponse{
 		Body: responses.Success(responses.Pet{}),
 	}, nil

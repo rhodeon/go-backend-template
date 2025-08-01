@@ -26,7 +26,7 @@ type CreateWithListResponse struct {
 	Body responses.EnvelopeWithMetadata[[]responses.User, *responses.Pagination]
 }
 
-func (h *Handlers) CreateWithList(_ context.Context, _ *CreateWithListRequest) (*CreateWithListResponse, error) {
+func (h *Handlers) createWithList(_ context.Context, _ *CreateWithListRequest) (*CreateWithListResponse, error) {
 	return &CreateWithListResponse{
 		Body: responses.SuccessWithMetadata(
 			[]responses.User{},

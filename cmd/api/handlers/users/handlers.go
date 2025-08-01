@@ -31,46 +31,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Description: "This can only be done by the logged in user.",
 			Summary:     "Create user",
 		},
-		h.Create,
-	)
-
-	huma.Register(
-		api,
-		huma.Operation{
-			OperationID: "users-create-with-list",
-			Method:      http.MethodPost,
-			Path:        "/create-with-list",
-			Tags:        []string{"users"},
-			Summary:     "Creates list of users with given input array",
-			Description: "Creates list of users with given input array.",
-		},
-		h.CreateWithList,
-	)
-
-	huma.Register(
-		api,
-		huma.Operation{
-			OperationID: "users-login",
-			Method:      http.MethodPost,
-			Path:        "/login",
-			Tags:        []string{"users"},
-			Summary:     "Logs user into the system",
-			Description: "Log into the system.",
-		},
-		h.Login,
-	)
-
-	huma.Register(
-		api,
-		huma.Operation{
-			OperationID: "users-logout",
-			Method:      http.MethodPost,
-			Path:        "/logout",
-			Tags:        []string{"users"},
-			Summary:     "Logs out current logged in user session",
-			Description: "Log user out of the system.",
-		},
-		h.Logout,
+		h.create,
 	)
 
 	huma.Register(
@@ -83,7 +44,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "Get user by id",
 			Description: "Get user detail based on id.",
 		},
-		h.Get,
+		h.get,
 	)
 
 	huma.Register(
@@ -96,7 +57,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "Update user resource",
 			Description: "This can only be done by the logged in user.",
 		},
-		h.Update,
+		h.update,
 	)
 
 	huma.Register(
@@ -109,6 +70,45 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "Delete user resource",
 			Description: "This can only be done by the logged in user.",
 		},
-		h.Delete,
+		h.delete,
+	)
+
+	huma.Register(
+		api,
+		huma.Operation{
+			OperationID: "users-create-with-list",
+			Method:      http.MethodPost,
+			Path:        "/create-with-list",
+			Tags:        []string{"users"},
+			Summary:     "Creates list of users with given input array",
+			Description: "Creates list of users with given input array.",
+		},
+		h.createWithList,
+	)
+
+	huma.Register(
+		api,
+		huma.Operation{
+			OperationID: "users-login",
+			Method:      http.MethodPost,
+			Path:        "/login",
+			Tags:        []string{"users"},
+			Summary:     "Logs user into the system",
+			Description: "Log into the system.",
+		},
+		h.login,
+	)
+
+	huma.Register(
+		api,
+		huma.Operation{
+			OperationID: "users-logout",
+			Method:      http.MethodPost,
+			Path:        "/logout",
+			Tags:        []string{"users"},
+			Summary:     "Logs out current logged in user session",
+			Description: "Log user out of the system.",
+		},
+		h.logout,
 	)
 }

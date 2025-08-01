@@ -23,6 +23,6 @@ type (
 	}
 )
 
-func (h *Handlers) UploadImage(_ context.Context, _ *UpdateRequest) (*UpdateResponse, error) {
+func (h *Handlers) uploadImage(_ context.Context, _ *UpdateRequest) (*UpdateResponse, error) {
 	return &UpdateResponse{}, nil
 }

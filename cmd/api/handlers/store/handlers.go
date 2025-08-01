@@ -37,6 +37,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Description: "Returns a map of status codes to quantities.",
 			Summary:     "Returns pet inventories by status",
 		},
-		h.Inventory,
+		h.inventory,
 	)
 }

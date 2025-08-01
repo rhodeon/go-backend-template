@@ -21,6 +21,6 @@ type CreateResponse struct {
 	Body responses.Envelope[responses.Order]
 }
 
-func (h *Handlers) Create(_ context.Context, _ *CreateRequest) (*CreateResponse, error) {
+func (h *Handlers) create(_ context.Context, _ *CreateRequest) (*CreateResponse, error) {
 	return &CreateResponse{}, nil
 }

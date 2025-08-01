@@ -23,6 +23,6 @@ type UpdateResponse struct {
 	Body responses.Envelope[responses.User]
 }
 
-func (h *Handlers) Update(_ context.Context, _ *UpdateRequest) (*UpdateResponse, error) {
+func (h *Handlers) update(_ context.Context, _ *UpdateRequest) (*UpdateResponse, error) {
 	return &UpdateResponse{}, nil
 }

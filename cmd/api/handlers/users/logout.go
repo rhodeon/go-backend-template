@@ -10,7 +10,7 @@ type LogoutResponse struct {
 	Body responses.Envelope[responses.SuccessMessage]
 }
 
-func (h *Handlers) Logout(_ context.Context, _ *struct{}) (*LogoutResponse, error) {
+func (h *Handlers) logout(_ context.Context, _ *struct{}) (*LogoutResponse, error) {
 	return &LogoutResponse{
 		Body: responses.Success(responses.SuccessMessage("Success")),
 	}, nil

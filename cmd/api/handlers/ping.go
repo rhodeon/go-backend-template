@@ -10,7 +10,7 @@ type PingResponse struct {
 	Body responses.Envelope[responses.SuccessMessage]
 }
 
-func (h *Handlers) Ping(_ context.Context, _ *struct{}) (*PingResponse, error) {
+func (h *handlers) ping(_ context.Context, _ *struct{}) (*PingResponse, error) {
 	return &PingResponse{
 		Body: responses.Success[responses.SuccessMessage]("Success"),
 	}, nil

@@ -37,7 +37,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "Create pet",
 			Description: "This can only be done by the logged in user.",
 		},
-		h.Create,
+		h.create,
 	)
 
 	huma.Register(
@@ -50,7 +50,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "Get pet by id",
 			Description: "Get pet detail based on id.",
 		},
-		h.Get,
+		h.get,
 	)
 
 	huma.Register(
@@ -63,7 +63,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "Update pet resource",
 			Description: "This can only be done by the logged in user.",
 		},
-		h.Update,
+		h.update,
 	)
 
 	huma.Register(
@@ -76,7 +76,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "Delete pet resource",
 			// Description: "This can only be done by the logged in user.",
 		},
-		h.Delete,
+		h.delete,
 	)
 
 	huma.Register(
@@ -89,7 +89,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "List pets",
 			// Description: "Log into the system.",
 		},
-		h.List,
+		h.list,
 	)
 
 	huma.Register(
@@ -102,6 +102,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Summary:     "Upload pet image",
 			// Description: "Log user out of the system.",
 		},
-		h.UploadImage,
+		h.uploadImage,
 	)
 }
