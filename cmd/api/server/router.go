@@ -31,6 +31,7 @@ func router(app *internal.Application) http.Handler {
 		{Name: "misc"},
 		{Name: "user"},
 		{Name: "store"},
+		{Name: "pets"},
 	}
 
 	handlers.Setup(app, api)
