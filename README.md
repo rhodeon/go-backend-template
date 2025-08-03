@@ -5,13 +5,15 @@
 - Postgres (should be self-explanatory).
 
 ## Getting Started
-- Install the [just](https://just.systems/) automation tool to run commands in the `Justfile`.
-- Run `just install-tools` to install the binaries needed for other phases. They are installed into a relative `dev-tools` folder to avoid conflicts with globally installed versions.
+- Install the [Mise](https://mise.jdx.dev) automation tool to run commands in the `mise.toml` file.
+- Mise conveniently groups related commands together and is the preferred way of running different actions. 
+- Run `mise init` to register the `git-hooks` folder in your git config.
+- Mise also automatically installs needed development tools on its first run.
 - Set up a new `.env` file using the vars set in .env.example as a guide.
-- Run `just migrations up` to set up the database.
-- Run `just api` to start the server.
+- Run `mise migrations -- up` to set up the database.
+- Run `mise api` to start the server.
 - An automatically generated OpenAPI spec can be viewed at the `/docs` path of the API.
-- More actions can be found by running `just --list`.
+- More actions can be found by running `mise run`.
 
 ## Project Structure
 There are 3 primary layers:

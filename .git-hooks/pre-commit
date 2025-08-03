@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Fix code formatting.
-just tidy
+mise tidy
 
 # While all files are formatted, only files which were already staged are staged again.
 # This is done to prevent accidental staging of intentionally unstaged files.

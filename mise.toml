@@ -1,0 +1,90 @@
+[tools]
+"golangci-lint" = "v2.3.0"
+"aqua:sqlc-dev/sqlc" = "1.29.0"
+"pipx:sqlfluff" = "3.4.2"
+
+[env]
+# Load environment variables from .env file
+_.file = ".env"
+
+[tasks.default]
+description = "Display all available tasks"
+# `quiet = true` needs to be added to every task to suppress the command running and show only the echoed messages.
+# It would be more convenient to add it as a global setting but doing that unfortunately prevents tool installation progress from being displayed.
+quiet = true
+run = [
+    "echo 'For first-time setup, run: mise init'",
+    "echo 'Available tasks:'",
+    "mise tasks"
+]
+
+[tasks.init]
+description = "First-time setup after cloning the repository"
+quiet = true
+run = [
+    "#echo 'Configuring git hooks directory...'",
+    "git config core.hooksPath .git-hooks"
+]
+
+[tasks.api]
+description = "Start the API service"
+quiet = true
+run = "cd ./cmd/api && go run ."
+
+[tasks.migrations]
+description = "Run migrations. Use `mise migragtions` to see all commands, and 'mise run migrations -- <args>' to pass arguments"
+quiet = true
+run = "cd ./cmd/migrations && go run . ${@}"
+
+[tasks.test]
+description = "Run all tests in codebase"
+quiet = true
+run = [
+    "echo 'Running tests...'",
+    "go test ./..."
+]
+
+[tasks.tidy]
+description = "Format the codebase uniformly and vendor dependencies"
+quiet = true
+run = [
+    "echo 'Tidying dependencies...'",
+    "go mod tidy -v",
+    "go mod vendor",
+    "echo 'Formatting Go codebase...'",
+    "golangci-lint fmt",
+    "echo 'Formatting SQL migration files...'",
+    "sqlfluff fix ./cmd/migrations/schema",
+    "echo 'Formatting sqlc queries...'",
+    "sqlfluff fix ./repositories/database/postgres/queries"
+]
+
+[tasks.vet]
+description = "Lint and vet Go codebase and SQL queries"
+quiet = true
+run = [
+    "echo 'Vetting Go code...'",
+    "go mod verify",
+    "golangci-lint run ./...",
+    "echo 'Linting SQL migration queries...'",
+    "sqlfluff lint ./cmd/migrations/schema",
+    "echo 'Linting sqlc queries...'",
+    "sqlfluff lint ./repositories/database/postgres/queries",
+    "echo 'Vetting sqlc queries...'",
+    "./sqlc.sh",
+    "sqlc vet",
+]
+
+[tasks.sqlc]
+description = "Regenerate sqlc queries"
+quiet = true
+run = [
+    "echo 'Linting sqlc queries...'",
+    "sqlfluff fix ./repositories/database/postgres/queries",
+    "echo 'Regenerating sqlc.yaml...'",
+    "./sqlc.sh",
+    "echo 'Vetting sqlc queries...'",
+    "sqlc vet",
+    "echo 'Regenerating queries...'",
+    "sqlc generate"
+]
