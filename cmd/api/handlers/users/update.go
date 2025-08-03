@@ -12,12 +12,12 @@ type UpdateRequest struct {
 }
 
 type UpdateRequestBody struct {
-	Username  string `json:"username" required:"true" example:"johndoe"`
-	FirstName string `json:"first_name" required:"true" example:"John"`
-	LastName  string `json:"last_name" required:"true" example:"Doe"`
-	Email     string `json:"email" required:"true" example:"johndoe@example.com"`
+	Username  string `json:"username" required:"false"`
+	FirstName string `json:"first_name" required:"false"`
+	LastName  string `json:"last_name" required:"false"`
+	Email     string `json:"email" required:"false"`
 	Phone     string `json:"phone" required:"false"`
-	Password  string `json:"password" required:"true"`
+	Password  string `json:"password" required:"false"`
 }
 type UpdateResponse struct {
 	Body responses.Envelope[responses.User]

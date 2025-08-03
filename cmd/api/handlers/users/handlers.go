@@ -51,7 +51,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 		api,
 		huma.Operation{
 			OperationID: "users-update",
-			Method:      http.MethodPut,
+			Method:      http.MethodPatch,
 			Path:        "/{user_id}",
 			Tags:        []string{"users"},
 			Summary:     "Update user resource",

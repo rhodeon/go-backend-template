@@ -57,7 +57,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 		api,
 		huma.Operation{
 			OperationID: "pets-update",
-			Method:      http.MethodPut,
+			Method:      http.MethodPatch,
 			Path:        "/{pet_id}",
 			Tags:        []string{"pets"},
 			Summary:     "Update pet resource",
