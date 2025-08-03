@@ -26,7 +26,7 @@ func newUser(repos *repositories.Repositories) *User {
 }
 
 func (u User) Create(ctx context.Context, dbTx postgres.Transaction, user models.User) (models.User, error) {
-	dbCreatedUser, err := u.repos.Database.Users.Create(ctx, dbTx, pgusers.CreateParams{
+	_, err := u.repos.Database.Users.Create(ctx, dbTx, pgusers.CreateParams{
 		Email:    user.Email,
 		Username: user.Username,
 	})
@@ -43,11 +43,11 @@ func (u User) Create(ctx context.Context, dbTx postgres.Transaction, user models
 		}
 	}
 
-	return models.User{}.FromDbUser(dbCreatedUser), nil
+	return models.User{}, nil
 }
 
 func (u User) GetById(ctx context.Context, dbTx postgres.Transaction, userId int32) (models.User, error) {
-	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, userId)
+	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, int64(userId))
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):

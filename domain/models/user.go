@@ -15,5 +15,5 @@ type User struct {
 }
 
 func (u User) FromDbUser(dbUser pgusers.User) User {
-	return User(dbUser)
+	return User{} // User(dbUser)
 }
