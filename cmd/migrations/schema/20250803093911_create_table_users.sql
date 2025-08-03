@@ -1,15 +1,15 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS public.users (
-    id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    username        text        NOT NULL UNIQUE,
-    first_name      text        NOT NULL,
-    last_name       text        NOT NULL,
-    email           text        NOT NULL,
-    phone           text,
-    hashed_password text        NOT NULL,
-    created_at      timestamptz NOT NULL DEFAULT now(),
-    updated_at      timestamptz NOT NULL DEFAULT now()
+  id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  username        text NOT NULL UNIQUE,
+  first_name      text NOT NULL,
+  last_name       text NOT NULL,
+  email           text NOT NULL,
+  phone           text,
+  hashed_password text NOT NULL,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
 );
 -- +goose StatementEnd
 
