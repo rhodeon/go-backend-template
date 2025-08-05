@@ -278,6 +278,7 @@ go.opentelemetry.io/otel/trace/embedded
 go.uber.org/multierr
 # golang.org/x/crypto v0.38.0
 ## explicit; go 1.23.0
+golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
