@@ -2,11 +2,11 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS public.users (
   id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  email           text NOT NULL UNIQUE,
   username        text NOT NULL UNIQUE,
   first_name      text NOT NULL,
   last_name       text NOT NULL,
-  email           text NOT NULL,
-  phone           text,
+  phone_number    text,
   hashed_password text NOT NULL,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()

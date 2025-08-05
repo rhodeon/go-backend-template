@@ -16,7 +16,7 @@ type User struct {
 	FirstName      string      `db:"first_name"`
 	LastName       string      `db:"last_name"`
 	Email          string      `db:"email"`
-	Phone          pgtype.Text `db:"phone"`
+	PhoneNumber    pgtype.Text `db:"phone_number"`
 	HashedPassword string      `db:"hashed_password"`
 	CreatedAt      time.Time   `db:"created_at"`
 	UpdatedAt      time.Time   `db:"updated_at"`

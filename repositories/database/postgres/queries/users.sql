@@ -1,6 +1,20 @@
 -- name: Create :one
-INSERT INTO users (email, username)
-VALUES (@email, @username)
+INSERT INTO public.users (
+  username,
+  first_name,
+  last_name,
+  email,
+  phone_number,
+  hashed_password
+)
+VALUES (
+  @username,
+  @first_name,
+  @last_name,
+  @email,
+  @phone_number,
+  @hashed_password
+)
 RETURNING *;
 
 -- name: GetById :one

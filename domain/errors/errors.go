@@ -18,18 +18,18 @@ func (e *RecordNotFoundError) Error() string {
 
 type DuplicateDataError struct {
 	entity string
-	field  string
+	Field  string
 	value  string
 }
 
 func NewDuplicateDataError(entity string, field string, value string) *DuplicateDataError {
 	return &DuplicateDataError{
 		entity: entity,
-		field:  field,
+		Field:  field,
 		value:  value,
 	}
 }
 
 func (err *DuplicateDataError) Error() string {
-	return fmt.Sprintf("%s with %s %q already exists", err.entity, err.field, err.value)
+	return fmt.Sprintf("%s with %s %q already exists", err.entity, err.Field, err.value)
 }

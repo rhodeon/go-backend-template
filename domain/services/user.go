@@ -2,16 +2,18 @@ package services
 
 import (
 	"context"
-	"strings"
 
 	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
 	pgusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
+	"github.com/rhodeon/go-backend-template/utils/typeutils"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -25,28 +27,45 @@ func newUser(repos *repositories.Repositories) *User {
 	return userService
 }
 
-func (u User) Create(ctx context.Context, dbTx postgres.Transaction, user models.User) (models.User, error) {
-	_, err := u.repos.Database.Users.Create(ctx, dbTx, pgusers.CreateParams{
-		Email:    user.Email,
-		Username: user.Username,
+func (u *User) Create(ctx context.Context, dbTx postgres.Transaction, user models.User) (models.User, error) {
+	hashedPassword, err := u.hashPassword(user.Password)
+	if err != nil {
+		return models.User{}, errors.Wrap(err, "hashing password")
+	}
+
+	createdUser, err := u.repos.Database.Users.Create(ctx, dbTx, pgusers.CreateParams{
+		Username:       user.Username,
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Email:          user.Email,
+		PhoneNumber:    postgres.NewPgxText(typeutils.Ptr(user.PhoneNumber)),
+		HashedPassword: hashedPassword,
 	})
 	if err != nil {
-		switch {
-		case strings.Contains(err.Error(), postgres.UniqueUsersEmail):
-			return models.User{}, domainerrors.NewDuplicateDataError("user", "email", user.Email)
+		var pgError *pgconn.PgError
 
-		case strings.Contains(err.Error(), postgres.UniqueUsersUsername):
-			return models.User{}, domainerrors.NewDuplicateDataError("user", "username", user.Username)
+		switch {
+		case errors.As(err, &pgError):
+			switch pgError.ConstraintName {
+			case postgres.UniqueUsersEmail:
+				return models.User{}, domainerrors.NewDuplicateDataError("user", "email", user.Email)
+
+			case postgres.UniqueUsersUsername:
+				return models.User{}, domainerrors.NewDuplicateDataError("user", "username", user.Username)
+
+			default:
+				return models.User{}, errors.Wrap(err, "creating user in database")
+			}
 
 		default:
-			return models.User{}, errors.Wrap(err, "unable to create user")
+			return models.User{}, errors.Wrap(err, "creating user in database")
 		}
 	}
 
-	return models.User{}, nil
+	return models.NewUser.FromDbUser(createdUser), nil
 }
 
-func (u User) GetById(ctx context.Context, dbTx postgres.Transaction, userId int32) (models.User, error) {
+func (u *User) GetById(ctx context.Context, dbTx postgres.Transaction, userId int32) (models.User, error) {
 	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, int64(userId))
 	if err != nil {
 		switch {
@@ -59,4 +78,13 @@ func (u User) GetById(ctx context.Context, dbTx postgres.Transaction, userId int
 	}
 
 	return models.User{}.FromDbUser(dbUser), nil
+}
+
+func (u *User) hashPassword(password string) (string, error) {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		return "", errors.Wrap(err, "generating password with bcrypt")
+	}
+
+	return string(passwordHash), nil
 }

@@ -7,21 +7,48 @@ package users
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const create = `-- name: Create :one
-INSERT INTO users (email, username)
-VALUES ($1, $2)
-RETURNING id, username, first_name, last_name, email, phone, hashed_password, created_at, updated_at
+INSERT INTO public.users (
+  username,
+  first_name,
+  last_name,
+  email,
+  phone_number,
+  hashed_password
+)
+VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6
+)
+RETURNING id, username, first_name, last_name, email, phone_number, hashed_password, created_at, updated_at
 `
 
 type CreateParams struct {
-	Email    string `db:"email"`
-	Username string `db:"username"`
+	Username       string      `db:"username"`
+	FirstName      string      `db:"first_name"`
+	LastName       string      `db:"last_name"`
+	Email          string      `db:"email"`
+	PhoneNumber    pgtype.Text `db:"phone_number"`
+	HashedPassword string      `db:"hashed_password"`
 }
 
 func (q *Queries) Create(ctx context.Context, db DBTX, arg CreateParams) (User, error) {
-	row := db.QueryRow(ctx, create, arg.Email, arg.Username)
+	row := db.QueryRow(ctx, create,
+		arg.Username,
+		arg.FirstName,
+		arg.LastName,
+		arg.Email,
+		arg.PhoneNumber,
+		arg.HashedPassword,
+	)
 	var i User
 	err := row.Scan(
 		&i.Id,
@@ -29,7 +56,7 @@ func (q *Queries) Create(ctx context.Context, db DBTX, arg CreateParams) (User, 
 		&i.FirstName,
 		&i.LastName,
 		&i.Email,
-		&i.Phone,
+		&i.PhoneNumber,
 		&i.HashedPassword,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -41,7 +68,7 @@ const delete = `-- name: Delete :one
 DELETE
 FROM users
 WHERE id = $1
-RETURNING id, username, first_name, last_name, email, phone, hashed_password, created_at, updated_at
+RETURNING id, username, first_name, last_name, email, phone_number, hashed_password, created_at, updated_at
 `
 
 func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
@@ -53,7 +80,7 @@ func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
 		&i.FirstName,
 		&i.LastName,
 		&i.Email,
-		&i.Phone,
+		&i.PhoneNumber,
 		&i.HashedPassword,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -62,7 +89,7 @@ func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
 }
 
 const getById = `-- name: GetById :one
-SELECT id, username, first_name, last_name, email, phone, hashed_password, created_at, updated_at
+SELECT id, username, first_name, last_name, email, phone_number, hashed_password, created_at, updated_at
 FROM users
 WHERE id = $1
 `
@@ -76,7 +103,7 @@ func (q *Queries) GetById(ctx context.Context, db DBTX, id int64) (User, error) 
 		&i.FirstName,
 		&i.LastName,
 		&i.Email,
-		&i.Phone,
+		&i.PhoneNumber,
 		&i.HashedPassword,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -90,7 +117,7 @@ SET
   email = $1,
   username = $2
 WHERE id = $3
-RETURNING id, username, first_name, last_name, email, phone, hashed_password, created_at, updated_at
+RETURNING id, username, first_name, last_name, email, phone_number, hashed_password, created_at, updated_at
 `
 
 type UpdateParams struct {
@@ -108,7 +135,7 @@ func (q *Queries) Update(ctx context.Context, db DBTX, arg UpdateParams) (User, 
 		&i.FirstName,
 		&i.LastName,
 		&i.Email,
-		&i.Phone,
+		&i.PhoneNumber,
 		&i.HashedPassword,
 		&i.CreatedAt,
 		&i.UpdatedAt,
