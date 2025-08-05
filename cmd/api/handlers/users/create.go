@@ -33,7 +33,7 @@ type CreateResponse struct {
 func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateResponse, error) {
 	dbTx, commit, rollback, err := database.BeginTransaction(ctx, h.app.DbPool)
 	if err != nil {
-		return nil, apierrors.HandleUntypedError(ctx, err)
+		return nil, apierrors.UntypedError(ctx, err)
 	}
 	defer rollback(ctx)
 
@@ -46,23 +46,22 @@ func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateRespo
 		Password:    req.Body.Password,
 	})
 	if err != nil {
-		var duplicateErr *domainerrors.DuplicateDataError
+		var errDuplicateData *domainerrors.DuplicateDataError
 
 		switch {
-		case errors.As(err, &duplicateErr):
-			switch duplicateErr.Field {
+		case errors.As(err, &errDuplicateData):
+			switch errDuplicateData.Field {
 			case "email":
 				return nil, huma.Error409Conflict("email already taken")
 
 			case "username":
 				return nil, huma.Error409Conflict("username already taken")
-
-			default:
-				return nil, apierrors.HandleUntypedError(ctx, err)
 			}
 
+			fallthrough
+
 		default:
-			return nil, apierrors.HandleUntypedError(ctx, err)
+			return nil, apierrors.UntypedError(ctx, err)
 		}
 	}
 
@@ -77,8 +76,10 @@ func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateRespo
 	}
 
 	if err := commit(ctx); err != nil {
-		return nil, apierrors.HandleUntypedError(ctx, err)
+		return nil, apierrors.UntypedError(ctx, err)
 	}
 
-	return &CreateResponse{Body: responses.Success(respData)}, nil
+	return &CreateResponse{
+		Body: responses.Success(respData),
+	}, nil
 }

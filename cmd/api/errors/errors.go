@@ -60,10 +60,10 @@ func NewApiError() func(int, string, ...error) huma.StatusError {
 	}
 }
 
-// HandleUntypedError should be called in the default case of errors in the handlers after all recognised have been handled.
+// UntypedError should be called in the default case of errors in the handlers after all recognised have been handled.
 // Such an error could be a generic internal server error, a cancelled session, or could be due to the request timeout being exceeded.
 // A 504 Gateway Timeout (server timeout) is returned in the latter case.
-func HandleUntypedError(ctx context.Context, err error) error {
+func UntypedError(ctx context.Context, err error) error {
 	logger := contextutils.GetLogger(ctx)
 
 	switch {

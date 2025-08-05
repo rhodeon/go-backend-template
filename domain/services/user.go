@@ -65,15 +65,15 @@ func (u *User) Create(ctx context.Context, dbTx postgres.Transaction, user model
 	return models.NewUser.FromDbUser(createdUser), nil
 }
 
-func (u *User) GetById(ctx context.Context, dbTx postgres.Transaction, userId int32) (models.User, error) {
-	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, int64(userId))
+func (u *User) GetById(ctx context.Context, dbTx postgres.Transaction, userId int64) (models.User, error) {
+	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, userId)
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
 			return models.User{}, domainerrors.NewRecordNotFoundErr("user")
 
 		default:
-			return models.User{}, errors.Wrap(err, "unable to find user")
+			return models.User{}, errors.Wrap(err, "getting user by id from database")
 		}
 	}
 
