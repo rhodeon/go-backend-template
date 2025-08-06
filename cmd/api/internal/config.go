@@ -33,7 +33,7 @@ type ServerConfig struct {
 	WriteTimeout    time.Duration `env:"WRITE_TIMEOUT" envDefault:"15s"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
-	// RequestTimeout should be lower than WriteTimeout as no request will be returned if the request exceeds the write timeout.
+	// RequestTimeout should be lower than WriteTimeout as no response will be returned if the request exceeds the write timeout.
 	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT" envDefault:"10s"`
 }
 

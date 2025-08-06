@@ -5,9 +5,10 @@ import (
 
 	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
+	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
-	pgusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
+	dbusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
 	"github.com/rhodeon/go-backend-template/utils/typeutils"
 
 	"github.com/jackc/pgx/v5"
@@ -27,13 +28,13 @@ func newUser(repos *repositories.Repositories) *User {
 	return userService
 }
 
-func (u *User) Create(ctx context.Context, dbTx postgres.Transaction, user models.User) (models.User, error) {
+func (u *User) Create(ctx context.Context, dbTx *database.Tx, user models.User) (models.User, error) {
 	hashedPassword, err := u.hashPassword(user.Password)
 	if err != nil {
 		return models.User{}, errors.Wrap(err, "hashing password")
 	}
 
-	createdUser, err := u.repos.Database.Users.Create(ctx, dbTx, pgusers.CreateParams{
+	createdUser, err := u.repos.Database.Users.Create(ctx, dbTx, dbusers.CreateParams{
 		Username:       user.Username,
 		FirstName:      user.FirstName,
 		LastName:       user.LastName,
@@ -65,7 +66,7 @@ func (u *User) Create(ctx context.Context, dbTx postgres.Transaction, user model
 	return models.NewUser.FromDbUser(createdUser), nil
 }
 
-func (u *User) GetById(ctx context.Context, dbTx postgres.Transaction, userId int64) (models.User, error) {
+func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (models.User, error) {
 	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, userId)
 	if err != nil {
 		switch {

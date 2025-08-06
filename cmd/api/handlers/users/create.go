@@ -7,7 +7,6 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
-	"github.com/rhodeon/go-backend-template/internal/database"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
@@ -31,7 +30,7 @@ type CreateResponse struct {
 }
 
 func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateResponse, error) {
-	dbTx, commit, rollback, err := database.BeginTransaction(ctx, h.app.DbPool)
+	dbTx, commit, rollback, err := h.app.Db.BeginTx(ctx)
 	if err != nil {
 		return nil, apierrors.UntypedError(ctx, err)
 	}

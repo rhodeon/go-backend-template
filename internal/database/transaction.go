@@ -2,48 +2,59 @@ package database
 
 import (
 	"context"
-	"log/slog"
-
-	"github.com/rhodeon/go-backend-template/internal/log"
-	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
 )
 
-// BeginTransaction starts and returns a new transaction from the given pool along with its associated commit and rollback resolver functions.
-// Both resolvers are returned as guardrails to reduce the chance of forgetting to commit/rollback after the transaction is done.
-// The rollback is safe to call after commits and should always be deferred after calling BeginTransaction as a fail-safe.
-func BeginTransaction(ctx context.Context, dbPool *pgxpool.Pool) (pgx.Tx, commitResolver, rollbackResolver, error) {
-	dbTx, err := dbPool.Begin(ctx)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "starting database transaction")
-	}
-
-	return dbTx, commitTransaction(dbTx), rollbackTransaction(dbTx), nil
+// Tx represents a wrapper around a pgx.Tx, providing methods to interact with database transactions.
+// Importantly, it doesn't expose methods to commit or rollback. Those are delegated to be done at the same level where the transaction is created via Db.BeginTx.
+// This is done to eliminate the possibility of terminating a transaction down the call stack from where it was created and attempting to use it afterwards.
+type Tx struct {
+	innerTx pgx.Tx
 }
 
-type (
-	commitResolver   func(ctx context.Context) error
-	rollbackResolver func(ctx context.Context)
-)
+// Savepoint creates an anonymous savepoint and returns its rollback function.
+// Unlike Db.BeginTx, the rollback returned here should never be deferred as that will always roll back the parent transaction.
+// Instead, it should be used in the event that a recoverable error occurs during a transaction.
+// Savepoints are not cheap at a large scale, so this should be used sparingly.
+// Where possible, prefer handling recoverable errors with ON CONFLICT instead.
+// More context on their cost: https://postgres.ai/blog/20210831-postgresql-subtransactions-considered-harmful
+func (tx *Tx) Savepoint(ctx context.Context) (func(ctx context.Context) error, error) {
+	sp, err := tx.innerTx.Begin(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "starting transaction savepoint")
+	}
+	return tx.rollbackSavepoint(sp), nil
+}
 
-func commitTransaction(tx pgx.Tx) commitResolver {
+func (tx *Tx) rollbackSavepoint(sp pgx.Tx) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		// If the transaction is already closed, the error can be ignored.
-		if err := tx.Commit(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			return errors.Wrap(err, "commiting database transaction")
+		if err := sp.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			return errors.Wrap(err, "rolling back transaction savepoint")
 		}
 		return nil
 	}
 }
 
-func rollbackTransaction(tx pgx.Tx) rollbackResolver {
-	return func(ctx context.Context) {
-		// If the transaction is already closed, the error can be ignored.
-		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			contextutils.GetLogger(ctx).Error("Rolling back database transaction", slog.Any(log.AttrError, err))
-		}
-	}
+// Exec fulfills the DBTX interface needed for sqlc `:exec` operations.
+func (tx *Tx) Exec(ctx context.Context, s string, a ...any) (pgconn.CommandTag, error) {
+	return tx.innerTx.Exec(ctx, s, a...) //nolint:wrapcheck
+}
+
+// Query fulfills the DBTX interface needed for sqlc `:many` operations.
+func (tx *Tx) Query(ctx context.Context, s string, a ...any) (pgx.Rows, error) {
+	return tx.innerTx.Query(ctx, s, a...) //nolint:wrapcheck
+}
+
+// QueryRow fulfills the DBTX interface needed for sqlc `:one` operations.
+func (tx *Tx) QueryRow(ctx context.Context, s string, a ...any) pgx.Row {
+	return tx.innerTx.QueryRow(ctx, s, a...) //nolint:wrapcheck
+}
+
+// CopyFrom fulfills the DBTX interface needed for sqlc `:copyfrom` operations.
+func (tx *Tx) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
+	return tx.innerTx.CopyFrom(ctx, tableName, columnNames, rowSrc) //nolint:wrapcheck
 }

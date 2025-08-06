@@ -59,13 +59,14 @@ func main() {
 	cfg := internal.ParseConfig()
 
 	dbConfig := database.Config(cfg.Database)
-	dbPool, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
+	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
 	if err != nil {
 		panic(err)
 	}
+	defer closeDb()
 
-	db := stdlib.OpenDBFromPool(dbPool)
-	if err := goose.RunWithOptionsContext(mainCtx, command, db, "./schema", gooseArgs, goose.WithAllowMissing()); err != nil {
+	stdDb := stdlib.OpenDBFromPool(db.Pool())
+	if err := goose.RunWithOptionsContext(mainCtx, command, stdDb, "./schema", gooseArgs, goose.WithAllowMissing()); err != nil {
 		panic(err)
 	}
 }

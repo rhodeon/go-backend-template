@@ -14,7 +14,6 @@ import (
 	"github.com/rhodeon/go-backend-template/internal/database"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
@@ -54,40 +53,42 @@ func setupDatabaseContainer(ctx context.Context) error {
 	return nil
 }
 
-func ConnectDb(ctx context.Context) (*pgxpool.Pool, error) {
+func ConnectDb(ctx context.Context) (*database.Db, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	// A new random database is created for each test to prevent conflicts in operations.
 	dbName := "test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 
-	dbPool, err := database.Connect(ctx, config.Database, false)
+	initialDb, closeInitialDb, err := database.Connect(ctx, config.Database, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "connecting to initial database")
 	}
 
-	if _, err := dbPool.Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName)); err != nil {
+	if _, err := initialDb.Pool().Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName)); err != nil {
 		return nil, errors.Wrap(err, "creating test database")
 	}
-	dbPool.Close()
+	closeInitialDb()
 
 	testDbConfig := *config.Database
 	testDbConfig.Name = dbName
 
-	dbPool, err = database.Connect(ctx, &testDbConfig, false)
+	// The database pool of the test will be short-lived and automatically dropped when the test ends,
+	// so there's no need to add extra complexity by trying to close it.
+	db, _, err := database.Connect(ctx, &testDbConfig, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "connecting to test database")
 	}
 
-	if err := migrateSchema(dbPool.Config().ConnConfig.ConnString()); err != nil {
+	if err := migrateSchema(db.Pool().Config().ConnConfig.ConnString()); err != nil {
 		return nil, errors.Wrap(err, "migrating schema")
 	}
 
-	if err := seedData(ctx, dbPool); err != nil {
+	if err := seedData(ctx, db); err != nil {
 		return nil, errors.Wrap(err, "seeding data")
 	}
 
-	return dbPool, nil
+	return db, nil
 }
 
 func migrateSchema(connString string) error {
@@ -106,14 +107,14 @@ func migrateSchema(connString string) error {
 
 // seedData parses the individual seed files in the hub-api repo, each named after a table,
 // and populates their tables.
-func seedData(ctx context.Context, dbPool *pgxpool.Pool) error {
+func seedData(ctx context.Context, db *database.Db) error {
 	seedsPath := filepath.Join(projectRootDir, "testdata", "database_seeds")
 	seedFiles, err := os.ReadDir(seedsPath)
 	if err != nil {
 		return errors.Wrap(err, "reading database seeds directory")
 	}
 
-	dbTx, commit, rollback, err := database.BeginTransaction(ctx, dbPool)
+	dbTx, commit, rollback, err := db.BeginTx(ctx)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction to seed data")
 	}

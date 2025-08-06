@@ -80,7 +80,7 @@ linters:
           alias: domainerrors
 
         - pkg: github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/(\w+)
-          alias: pg$1
+          alias: db$1
 
       # Do not allow non-required aliases.
       # Default: false
@@ -140,4 +140,4 @@ linters:
 
     wrapcheck:
       extra-ignore-sigs:
-        - .HandleUntypedError(
+        - .UntypedError(

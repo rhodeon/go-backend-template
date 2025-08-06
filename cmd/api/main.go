@@ -18,15 +18,16 @@ func main() {
 	logger := log.NewLogger(cfg.DebugMode)
 
 	dbConfig := database.Config(cfg.Database)
-	dbPool, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
+	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
 	if err != nil {
 		panic(err)
 	}
+	defer closeDb()
 
 	repos := repositories.New()
 	svcs := services.New(repos)
 
-	app := internal.NewApplication(cfg, logger, dbPool, svcs)
+	app := internal.NewApplication(cfg, logger, db, svcs)
 
 	// A waitgroup is established to ensure background tasks are completed before shutting down the server.
 	backgroundWg := &sync.WaitGroup{}
