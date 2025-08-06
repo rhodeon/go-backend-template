@@ -64,15 +64,7 @@ func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateRespo
 		}
 	}
 
-	respData := responses.User{
-		Id:        createdUser.Id,
-		Username:  createdUser.Username,
-		FirstName: createdUser.FirstName,
-		LastName:  createdUser.LastName,
-		Email:     createdUser.Email,
-		Phone:     createdUser.PhoneNumber,
-		CreatedAt: createdUser.CreatedAt,
-	}
+	respData := responses.NewUser.FromDomainUser(createdUser)
 
 	if err := commit(ctx); err != nil {
 		return nil, apierrors.UntypedError(ctx, err)

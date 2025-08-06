@@ -43,15 +43,7 @@ func (h *Handlers) get(ctx context.Context, req *GetRequest) (*GetResponse, erro
 		}
 	}
 
-	respData := responses.User{
-		Id:        user.Id,
-		Username:  user.Username,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Email:     user.Email,
-		Phone:     user.PhoneNumber,
-		CreatedAt: user.CreatedAt,
-	}
+	respData := responses.NewUser.FromDomainUser(user)
 
 	if err := commit(ctx); err != nil {
 		return nil, apierrors.UntypedError(ctx, err)

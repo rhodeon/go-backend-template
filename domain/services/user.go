@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"strings"
 
 	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
 	"github.com/rhodeon/go-backend-template/domain/models"
@@ -12,7 +13,6 @@ import (
 	"github.com/rhodeon/go-backend-template/utils/typeutils"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -43,20 +43,12 @@ func (u *User) Create(ctx context.Context, dbTx *database.Tx, user models.User) 
 		HashedPassword: hashedPassword,
 	})
 	if err != nil {
-		var pgError *pgconn.PgError
-
 		switch {
-		case errors.As(err, &pgError):
-			switch pgError.ConstraintName {
-			case postgres.UniqueUsersEmail:
-				return models.User{}, domainerrors.NewDuplicateDataError("user", "email", user.Email)
+		case strings.Contains(err.Error(), postgres.UniqueUsersEmail):
+			return models.User{}, domainerrors.NewDuplicateDataError("user", "email", user.Email)
 
-			case postgres.UniqueUsersUsername:
-				return models.User{}, domainerrors.NewDuplicateDataError("user", "username", user.Username)
-
-			default:
-				return models.User{}, errors.Wrap(err, "creating user in database")
-			}
+		case strings.Contains(err.Error(), postgres.UniqueUsersUsername):
+			return models.User{}, domainerrors.NewDuplicateDataError("user", "username", user.Username)
 
 		default:
 			return models.User{}, errors.Wrap(err, "creating user in database")
