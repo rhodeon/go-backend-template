@@ -3,7 +3,7 @@ package responses
 import (
 	"time"
 
-	"github.com/rhodeon/go-backend-template/domain/models"
+	"github.com/rhodeon/go-backend-template/domain"
 )
 
 var NewUser = new(User)
@@ -18,7 +18,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at" required:"true"`
 }
 
-func (u *User) FromDomainUser(domainUser models.User) User {
+func (u *User) FromDomainUser(domainUser domain.User) User {
 	return User{
 		Id:        domainUser.Id,
 		Username:  domainUser.Username,

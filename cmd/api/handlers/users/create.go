@@ -5,8 +5,7 @@ import (
 
 	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
-	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
-	"github.com/rhodeon/go-backend-template/domain/models"
+	"github.com/rhodeon/go-backend-template/domain"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
@@ -36,7 +35,7 @@ func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateRespo
 	}
 	defer rollback(ctx)
 
-	createdUser, err := h.app.Services.User.Create(ctx, dbTx, models.User{
+	createdUser, err := h.app.Services.User.Create(ctx, dbTx, domain.User{
 		Email:       req.Body.Email,
 		Username:    req.Body.Username,
 		FirstName:   req.Body.FirstName,
@@ -45,7 +44,7 @@ func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateRespo
 		Password:    req.Body.Password,
 	})
 	if err != nil {
-		var errDuplicateData *domainerrors.DuplicateDataError
+		var errDuplicateData *domain.DuplicateDataError
 
 		switch {
 		case errors.As(err, &errDuplicateData):

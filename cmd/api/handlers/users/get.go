@@ -5,7 +5,7 @@ import (
 
 	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
-	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
+	"github.com/rhodeon/go-backend-template/domain"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/pkg/errors"
@@ -28,7 +28,7 @@ func (h *Handlers) get(ctx context.Context, req *GetRequest) (*GetResponse, erro
 
 	user, err := h.app.Services.User.GetById(ctx, dbTx, req.UserId)
 	if err != nil {
-		var errRecordNotFound *domainerrors.RecordNotFoundError
+		var errRecordNotFound *domain.RecordNotFoundError
 
 		switch {
 		case errors.As(err, &errRecordNotFound):

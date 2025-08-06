@@ -4,8 +4,7 @@ import (
 	"context"
 	"strings"
 
-	domainerrors "github.com/rhodeon/go-backend-template/domain/errors"
-	"github.com/rhodeon/go-backend-template/domain/models"
+	"github.com/rhodeon/go-backend-template/domain"
 	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
@@ -28,10 +27,10 @@ func newUser(repos *repositories.Repositories) *User {
 	return userService
 }
 
-func (u *User) Create(ctx context.Context, dbTx *database.Tx, user models.User) (models.User, error) {
+func (u *User) Create(ctx context.Context, dbTx *database.Tx, user domain.User) (domain.User, error) {
 	hashedPassword, err := u.hashPassword(user.Password)
 	if err != nil {
-		return models.User{}, errors.Wrap(err, "hashing password")
+		return domain.User{}, errors.Wrap(err, "hashing password")
 	}
 
 	createdUser, err := u.repos.Database.Users.Create(ctx, dbTx, dbusers.CreateParams{
@@ -45,32 +44,32 @@ func (u *User) Create(ctx context.Context, dbTx *database.Tx, user models.User) 
 	if err != nil {
 		switch {
 		case strings.Contains(err.Error(), postgres.UniqueUsersEmail):
-			return models.User{}, domainerrors.NewDuplicateDataError("user", "email", user.Email)
+			return domain.User{}, domain.NewDuplicateDataError("user", "email", user.Email)
 
 		case strings.Contains(err.Error(), postgres.UniqueUsersUsername):
-			return models.User{}, domainerrors.NewDuplicateDataError("user", "username", user.Username)
+			return domain.User{}, domain.NewDuplicateDataError("user", "username", user.Username)
 
 		default:
-			return models.User{}, errors.Wrap(err, "creating user in database")
+			return domain.User{}, errors.Wrap(err, "creating user in database")
 		}
 	}
 
-	return models.NewUser.FromDbUser(createdUser), nil
+	return domain.NewUser.FromDbUser(createdUser), nil
 }
 
-func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (models.User, error) {
+func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (domain.User, error) {
 	dbUser, err := u.repos.Database.Users.GetById(ctx, dbTx, userId)
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
-			return models.User{}, domainerrors.NewRecordNotFoundErr("user")
+			return domain.User{}, domain.NewRecordNotFoundErr("user")
 
 		default:
-			return models.User{}, errors.Wrap(err, "getting user by id from database")
+			return domain.User{}, errors.Wrap(err, "getting user by id from database")
 		}
 	}
 
-	return models.User{}.FromDbUser(dbUser), nil
+	return domain.User{}.FromDbUser(dbUser), nil
 }
 
 func (u *User) hashPassword(password string) (string, error) {
