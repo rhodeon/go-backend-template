@@ -28,7 +28,7 @@ VALUES (
   $5,
   $6
 )
-RETURNING id, username, first_name, last_name, email, phone_number, hashed_password, created_at, updated_at
+RETURNING id, email, username, first_name, last_name, phone_number, hashed_password, created_at, updated_at
 `
 
 type CreateParams struct {
@@ -52,10 +52,10 @@ func (q *Queries) Create(ctx context.Context, db DBTX, arg CreateParams) (User, 
 	var i User
 	err := row.Scan(
 		&i.Id,
+		&i.Email,
 		&i.Username,
 		&i.FirstName,
 		&i.LastName,
-		&i.Email,
 		&i.PhoneNumber,
 		&i.HashedPassword,
 		&i.CreatedAt,
@@ -68,7 +68,7 @@ const delete = `-- name: Delete :one
 DELETE
 FROM users
 WHERE id = $1
-RETURNING id, username, first_name, last_name, email, phone_number, hashed_password, created_at, updated_at
+RETURNING id, email, username, first_name, last_name, phone_number, hashed_password, created_at, updated_at
 `
 
 func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
@@ -76,10 +76,10 @@ func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
 	var i User
 	err := row.Scan(
 		&i.Id,
+		&i.Email,
 		&i.Username,
 		&i.FirstName,
 		&i.LastName,
-		&i.Email,
 		&i.PhoneNumber,
 		&i.HashedPassword,
 		&i.CreatedAt,
@@ -89,7 +89,7 @@ func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
 }
 
 const getById = `-- name: GetById :one
-SELECT id, username, first_name, last_name, email, phone_number, hashed_password, created_at, updated_at
+SELECT id, email, username, first_name, last_name, phone_number, hashed_password, created_at, updated_at
 FROM users
 WHERE id = $1
 `
@@ -99,10 +99,10 @@ func (q *Queries) GetById(ctx context.Context, db DBTX, id int64) (User, error) 
 	var i User
 	err := row.Scan(
 		&i.Id,
+		&i.Email,
 		&i.Username,
 		&i.FirstName,
 		&i.LastName,
-		&i.Email,
 		&i.PhoneNumber,
 		&i.HashedPassword,
 		&i.CreatedAt,
@@ -117,7 +117,7 @@ SET
   email = $1,
   username = $2
 WHERE id = $3
-RETURNING id, username, first_name, last_name, email, phone_number, hashed_password, created_at, updated_at
+RETURNING id, email, username, first_name, last_name, phone_number, hashed_password, created_at, updated_at
 `
 
 type UpdateParams struct {
@@ -131,10 +131,10 @@ func (q *Queries) Update(ctx context.Context, db DBTX, arg UpdateParams) (User, 
 	var i User
 	err := row.Scan(
 		&i.Id,
+		&i.Email,
 		&i.Username,
 		&i.FirstName,
 		&i.LastName,
-		&i.Email,
 		&i.PhoneNumber,
 		&i.HashedPassword,
 		&i.CreatedAt,

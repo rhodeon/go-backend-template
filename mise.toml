@@ -72,6 +72,7 @@ run = [
     "sqlfluff lint ./repositories/database/postgres/queries",
     "echo 'Vetting sqlc queries...'",
     "./sqlc.sh",
+    "sqlc diff",
     "sqlc vet",
 ]
 

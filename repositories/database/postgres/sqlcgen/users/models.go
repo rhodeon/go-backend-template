@@ -12,10 +12,10 @@ import (
 
 type User struct {
 	Id             int64       `db:"id"`
+	Email          string      `db:"email"`
 	Username       string      `db:"username"`
 	FirstName      string      `db:"first_name"`
 	LastName       string      `db:"last_name"`
-	Email          string      `db:"email"`
 	PhoneNumber    pgtype.Text `db:"phone_number"`
 	HashedPassword string      `db:"hashed_password"`
 	CreatedAt      time.Time   `db:"created_at"`
