@@ -44,19 +44,12 @@ func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateRespo
 		Password:    req.Body.Password,
 	})
 	if err != nil {
-		var errDuplicateData *domain.DuplicateDataError
-
 		switch {
-		case errors.As(err, &errDuplicateData):
-			switch errDuplicateData.Field {
-			case "email":
-				return nil, huma.Error409Conflict("email already taken")
+		case errors.Is(err, domain.ErrUserDuplicateEmail):
+			return nil, huma.Error409Conflict("email already taken")
 
-			case "username":
-				return nil, huma.Error409Conflict("username already taken")
-			}
-
-			fallthrough
+		case errors.Is(err, domain.ErrUserDuplicateUsername):
+			return nil, huma.Error409Conflict("username already taken")
 
 		default:
 			return nil, apierrors.UntypedError(ctx, err)

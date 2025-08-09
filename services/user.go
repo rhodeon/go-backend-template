@@ -45,10 +45,10 @@ func (u *User) Create(ctx context.Context, dbTx *database.Tx, user domain.User) 
 	if err != nil {
 		switch {
 		case strings.Contains(err.Error(), postgres.UniqueUsersEmail):
-			return domain.User{}, domain.NewDuplicateDataError("user", "email", user.Email)
+			return domain.User{}, domain.ErrUserDuplicateEmail
 
 		case strings.Contains(err.Error(), postgres.UniqueUsersUsername):
-			return domain.User{}, domain.NewDuplicateDataError("user", "username", user.Username)
+			return domain.User{}, domain.ErrUserDuplicateUsername
 
 		default:
 			return domain.User{}, fmt.Errorf("creating user in database: %w", err)
@@ -63,7 +63,7 @@ func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (do
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
-			return domain.User{}, domain.NewRecordNotFoundErr("user")
+			return domain.User{}, domain.ErrUserNotFound
 
 		default:
 			return domain.User{}, fmt.Errorf("getting user by id from database: %w", err)

@@ -28,15 +28,9 @@ func (h *Handlers) get(ctx context.Context, req *GetRequest) (*GetResponse, erro
 
 	user, err := h.app.Services.User.GetById(ctx, dbTx, req.UserId)
 	if err != nil {
-		var errRecordNotFound *domain.RecordNotFoundError
-
 		switch {
-		case errors.As(err, &errRecordNotFound):
-			if errRecordNotFound.Entity == "user" {
-				return nil, huma.Error404NotFound("user not found")
-			}
-
-			fallthrough
+		case errors.Is(err, domain.ErrUserNotFound):
+			return nil, huma.Error404NotFound("user not found")
 
 		default:
 			return nil, apierrors.UntypedError(ctx, err)

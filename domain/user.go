@@ -1,9 +1,16 @@
 package domain
 
 import (
+	"errors"
 	"time"
 
 	dbusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
+)
+
+var (
+	ErrUserNotFound          = errors.New("user not found")
+	ErrUserDuplicateEmail    = errors.New("duplicate user email")
+	ErrUserDuplicateUsername = errors.New("duplicate user username")
 )
 
 var NewUser = new(User)
