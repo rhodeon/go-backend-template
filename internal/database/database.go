@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/pkg/errors"
 )
 
 // Db abstracts the underlying database pool and provides helper methods for conveniently creating and managing transactions.
@@ -32,7 +32,7 @@ func Connect(ctx context.Context, cfg *Config, debugMode bool) (*Db, func(), err
 
 	pgxPoolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "unable to parse pgx pool config")
+		return nil, nil, fmt.Errorf("parsing pgx pool config: %w", err)
 	}
 	pgxPoolCfg.ConnConfig.Tracer = newTracer(debugMode)
 	pgxPoolCfg.MaxConns = cfg.MaxConns
@@ -41,7 +41,7 @@ func Connect(ctx context.Context, cfg *Config, debugMode bool) (*Db, func(), err
 
 	connPool, err := pgxpool.NewWithConfig(ctx, pgxPoolCfg)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "unable to create db connection pool")
+		return nil, nil, fmt.Errorf("creating db connection pool: %w", err)
 	}
 
 	// The database is pinged to ensure the connection was established.
@@ -49,7 +49,7 @@ func Connect(ctx context.Context, cfg *Config, debugMode bool) (*Db, func(), err
 	defer cancel()
 
 	if err := connPool.Ping(ctx); err != nil {
-		return nil, nil, errors.Wrap(err, "error pinging postgres")
+		return nil, nil, fmt.Errorf("pinging postgres: %w", err)
 	}
 
 	return &Db{connPool}, connPool.Close, nil
@@ -72,7 +72,7 @@ func (p *Db) BeginTx(ctx context.Context, opts ...TxOptions) (*Tx, commitResolve
 
 	dbTx, err := p.pool.BeginTx(ctx, txOptions)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "starting database transaction")
+		return nil, nil, nil, fmt.Errorf("starting database transaction: %w", err)
 	}
 
 	tx := &Tx{dbTx}
@@ -88,7 +88,7 @@ func (p *Db) commitTransaction(tx *Tx) commitResolver {
 	return func(ctx context.Context) error {
 		// If the transaction is already closed, the error can be ignored.
 		if err := tx.innerTx.Commit(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			return errors.Wrap(err, "commiting database transaction")
+			return fmt.Errorf("commiting database transaction: %w", err)
 		}
 		return nil
 	}

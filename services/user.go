@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/rhodeon/go-backend-template/domain"
@@ -12,7 +14,6 @@ import (
 	"github.com/rhodeon/go-backend-template/utils/typeutils"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -30,7 +31,7 @@ func newUser(repos *repositories.Repositories) *User {
 func (u *User) Create(ctx context.Context, dbTx *database.Tx, user domain.User) (domain.User, error) {
 	hashedPassword, err := u.hashPassword(user.Password)
 	if err != nil {
-		return domain.User{}, errors.Wrap(err, "hashing password")
+		return domain.User{}, fmt.Errorf("hashing password: %w", err)
 	}
 
 	createdUser, err := u.repos.Database.Users.Create(ctx, dbTx, dbusers.CreateParams{
@@ -50,7 +51,7 @@ func (u *User) Create(ctx context.Context, dbTx *database.Tx, user domain.User) 
 			return domain.User{}, domain.NewDuplicateDataError("user", "username", user.Username)
 
 		default:
-			return domain.User{}, errors.Wrap(err, "creating user in database")
+			return domain.User{}, fmt.Errorf("creating user in database: %w", err)
 		}
 	}
 
@@ -65,7 +66,7 @@ func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (do
 			return domain.User{}, domain.NewRecordNotFoundErr("user")
 
 		default:
-			return domain.User{}, errors.Wrap(err, "getting user by id from database")
+			return domain.User{}, fmt.Errorf("getting user by id from database: %w", err)
 		}
 	}
 
@@ -75,7 +76,7 @@ func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (do
 func (u *User) hashPassword(password string) (string, error) {
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-		return "", errors.Wrap(err, "generating password with bcrypt")
+		return "", fmt.Errorf("generating password with bcrypt: %w", err)
 	}
 
 	return string(passwordHash), nil

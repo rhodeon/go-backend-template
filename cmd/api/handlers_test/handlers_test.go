@@ -13,7 +13,7 @@ package handlers_test
 // 	"github.com/rhodeon/go-backend-template/repositories"
 // 	"github.com/rhodeon/go-backend-template/utils/testutils"
 //
-// 	"github.com/pkg/errors"
+// 	"errors"
 // )
 //
 // // spawnServer sets up a server and data common to all tests in the package.

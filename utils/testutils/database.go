@@ -15,7 +15,6 @@ import (
 
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -36,18 +35,18 @@ func setupDatabaseContainer(ctx context.Context) error {
 				WithStartupTimeout(5*time.Second)),
 	)
 	if err != nil {
-		return errors.Wrap(err, "creating Postgres container instance")
+		return fmt.Errorf("creating Postgres container instance: %w", err)
 	}
 
 	mappedPort, err := postgresContainer.MappedPort(ctx, "5432")
 	if err != nil {
-		return errors.Wrap(err, "getting mapped Postgres container ports")
+		return fmt.Errorf("getting mapped Postgres container ports: %w", err)
 	}
 
 	config.Database.Port = mappedPort.Port()
 
 	if err = postgresContainer.Start(ctx); err != nil {
-		return errors.Wrap(err, "starting Postgres container")
+		return fmt.Errorf("starting Postgres container: %w", err)
 	}
 
 	return nil
@@ -62,11 +61,11 @@ func ConnectDb(ctx context.Context) (*database.Db, error) {
 
 	initialDb, closeInitialDb, err := database.Connect(ctx, config.Database, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "connecting to initial database")
+		return nil, fmt.Errorf("connecting to initial database: %w", err)
 	}
 
 	if _, err := initialDb.Pool().Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName)); err != nil {
-		return nil, errors.Wrap(err, "creating test database")
+		return nil, fmt.Errorf("creating test database: %w", err)
 	}
 	closeInitialDb()
 
@@ -77,15 +76,15 @@ func ConnectDb(ctx context.Context) (*database.Db, error) {
 	// so there's no need to add extra complexity by trying to close it.
 	db, _, err := database.Connect(ctx, &testDbConfig, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "connecting to test database")
+		return nil, fmt.Errorf("connecting to test database: %w", err)
 	}
 
 	if err := migrateSchema(db.Pool().Config().ConnConfig.ConnString()); err != nil {
-		return nil, errors.Wrap(err, "migrating schema")
+		return nil, fmt.Errorf("migrating schema: %w", err)
 	}
 
 	if err := seedData(ctx, db); err != nil {
-		return nil, errors.Wrap(err, "seeding data")
+		return nil, fmt.Errorf("seeding data: %w", err)
 	}
 
 	return db, nil
@@ -94,12 +93,12 @@ func ConnectDb(ctx context.Context) (*database.Db, error) {
 func migrateSchema(connString string) error {
 	db, err := sql.Open("pgx/v5", connString)
 	if err != nil {
-		return errors.Wrap(err, "opening database")
+		return fmt.Errorf("opening database: %w", err)
 	}
 
 	migrationsPath := filepath.Join(projectRootDir, "cmd", "migrations", "schema")
 	if err := goose.Up(db, migrationsPath); err != nil {
-		return errors.Wrap(err, "applying up migrations")
+		return fmt.Errorf("applying up migrations: %w", err)
 	}
 
 	return nil
@@ -111,18 +110,18 @@ func seedData(ctx context.Context, db *database.Db) error {
 	seedsPath := filepath.Join(projectRootDir, "testdata", "database_seeds")
 	seedFiles, err := os.ReadDir(seedsPath)
 	if err != nil {
-		return errors.Wrap(err, "reading database seeds directory")
+		return fmt.Errorf("reading database seeds directory: %w", err)
 	}
 
 	dbTx, commit, rollback, err := db.BeginTx(ctx)
 	if err != nil {
-		return errors.Wrap(err, "unable to begin transaction to seed data")
+		return fmt.Errorf("beginning transaction to seed data: %w", err)
 	}
 	defer rollback(ctx)
 
 	// Triggers are disabled to prevent foreign key constraints from raising an error when seeding data out of order.
 	if _, err := dbTx.Exec(ctx, "SET session_replication_role = replica"); err != nil {
-		return errors.Wrap(err, "disabling triggers")
+		return fmt.Errorf("disabling triggers: %w", err)
 	}
 
 	for _, entry := range seedFiles {
@@ -131,12 +130,12 @@ func seedData(ctx context.Context, db *database.Db) error {
 
 			data, err := os.ReadFile(path.Join(seedsPath, entry.Name()))
 			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("reading seed file for table %q", tableName))
+				return fmt.Errorf("reading seed file for table %q: %w", tableName, err)
 			}
 
 			insertionQuery := fmt.Sprintf("INSERT INTO %s OVERRIDING SYSTEM VALUE SELECT * FROM json_populate_recordset(NULL::%s, $1)", tableName, tableName)
 			if _, err := dbTx.Exec(ctx, insertionQuery, data); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("inserting data for table %q", tableName))
+				return fmt.Errorf("inserting data for table %q: %w", tableName, err)
 			}
 
 			// Although this isn't directly stated in the Postgres docs (as far as I can tell),
@@ -157,24 +156,24 @@ func seedData(ctx context.Context, db *database.Db) error {
 			var sequenceName string
 			err = dbTx.QueryRow(ctx, "SELECT pg_get_serial_sequence($1, 'id')", tableName).Scan(&sequenceName)
 			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("getting sequence name for table %q", tableName))
+				return fmt.Errorf("getting sequence name for table %q: %w", tableName, err)
 			}
 
 			columnName := "id"
 			// With this, the next insertion to the table will start from a valid ID.
 			setValQuery := fmt.Sprintf("SELECT setval('%s', (SELECT MAX(%s) FROM %s))", sequenceName, columnName, tableName)
 			if _, err := dbTx.Exec(ctx, setValQuery); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("updating starting ID value for table %q", tableName))
+				return fmt.Errorf("updating starting ID value for table %q: %w", tableName, err)
 			}
 		}
 	}
 
 	if _, err := dbTx.Exec(ctx, "SET session_replication_role = DEFAULT"); err != nil {
-		return errors.Wrap(err, "re-enabling triggers")
+		return fmt.Errorf("re-enabling triggers: %w", err)
 	}
 
 	if err := commit(ctx); err != nil {
-		return errors.Wrap(err, "committing transaction")
+		return fmt.Errorf("committing transaction: %w", err)
 	}
 
 	return nil

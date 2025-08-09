@@ -2,10 +2,11 @@ package database
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/pkg/errors"
 )
 
 // Tx represents a wrapper around a pgx.Tx, providing methods to interact with database transactions.
@@ -24,7 +25,7 @@ type Tx struct {
 func (tx *Tx) Savepoint(ctx context.Context) (func(ctx context.Context) error, error) {
 	sp, err := tx.innerTx.Begin(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "starting transaction savepoint")
+		return nil, fmt.Errorf("starting transaction savepoint: %w", err)
 	}
 	return tx.rollbackSavepoint(sp), nil
 }
@@ -33,7 +34,7 @@ func (tx *Tx) rollbackSavepoint(sp pgx.Tx) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		// If the transaction is already closed, the error can be ignored.
 		if err := sp.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			return errors.Wrap(err, "rolling back transaction savepoint")
+			return fmt.Errorf("rolling back transaction savepoint: %w", err)
 		}
 		return nil
 	}

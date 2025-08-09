@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -13,8 +14,6 @@ import (
 
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/internal/log"
-
-	"github.com/pkg/errors"
 )
 
 // ServeApi starts up a server with the app data.
@@ -40,7 +39,7 @@ func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, li
 	// server is listening for connections.
 	listener, err := net.Listen("tcp", srv.Addr)
 	if err != nil {
-		return errors.Wrap(err, "failed to bind to address")
+		return fmt.Errorf("binding to address: %w", err)
 	}
 
 	listenPort <- listener.Addr().(*net.TCPAddr).Port //nolint: errcheck
@@ -54,7 +53,7 @@ func ServeApi(app *internal.Application, backgroundWaitGroup *sync.WaitGroup, li
 
 	if err := srv.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
 		// Return unsuccessful server shutdown errors.
-		return errors.Wrap(err, "server shutdown")
+		return fmt.Errorf("shutting down server: %w", err)
 	}
 
 	// Block flow until the shutdown error channel is updated.

@@ -32,7 +32,6 @@ formatters:
 
 linters:
   enable:
-    - depguard
     - errorlint
     - gocritic
     - govet
@@ -45,15 +44,6 @@ linters:
     - wrapcheck
 
   settings:
-    depguard:
-      rules:
-        use_pkg_errors:
-          files:
-            - $all
-          deny:
-            - pkg: errors
-              desc: "use `github.com/pkg/errors` as it provides a stacktrace for easier pinpointing of errors"
-
     errcheck:
       check-type-assertions: true
       exclude-functions:

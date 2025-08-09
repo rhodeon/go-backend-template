@@ -2,13 +2,13 @@ package users
 
 import (
 	"context"
+	"errors"
 
 	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 	"github.com/rhodeon/go-backend-template/domain"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/pkg/errors"
 )
 
 type CreateRequest struct {

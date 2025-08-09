@@ -2,6 +2,7 @@ package errors
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/pkg/errors"
 )
 
 // ApiError is a subset of the default huma.ErrorModel with both the status and title stripped out

@@ -5,15 +5,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-
-	"github.com/pkg/errors"
 )
 
 // getProjectRootDir determines the root directory of the project by finding the first location with the go.mod file.
 func getProjectRootDir() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
-		return "", errors.Wrap(err, "unable to get current working directory")
+		return "", fmt.Errorf("getting current working directory: %w", err)
 	}
 
 	for {
