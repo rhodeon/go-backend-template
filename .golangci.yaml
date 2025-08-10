@@ -2,7 +2,10 @@ version: "2"
 
 run:
   timeout: 5m
-  issues-exit-code: 10
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
 
 output:
   show-stats: true
@@ -32,7 +35,9 @@ formatters:
 
 linters:
   enable:
+    - depguard
     - errorlint
+    - forbidigo
     - gocritic
     - govet
     - importas
@@ -44,10 +49,24 @@ linters:
     - wrapcheck
 
   settings:
+    depguard:
+      rules:
+        use_pkg_errors:
+          files:
+            - $all
+          deny:
+            - pkg: errors
+              desc: "use `github.com/go-errors/errors` as it provides a stack trace for easier pinpointing of errors"
+
     errcheck:
       check-type-assertions: true
       exclude-functions:
         - (io.Closer).Close
+
+    forbidigo:
+      forbid:
+        - pattern: fmt.Errorf
+          msg: "`errors.Errorf()` should be used in place of `fmt.Errorf()` to wrap errors with stack traces"
 
     govet:
       enable-all: true
@@ -105,6 +124,8 @@ linters:
 
         - name: time-equal
 
+        - name: unused-parameter
+
     sloglint:
       # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
       # https://github.com/go-simpler/sloglint?tab=readme-ov-file#attributes-only
@@ -128,3 +149,7 @@ linters:
     wrapcheck:
       extra-ignore-sigs:
         - .UntypedError(
+
+      ignore-sig-regexps:
+        # Errors in the `domain` package are wrapped internally.
+        - domain\.[A-Za-z]+Err[A-Za-z]+\(

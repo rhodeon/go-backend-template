@@ -15,12 +15,38 @@ func NewLogger(debugMode bool) *slog.Logger {
 	}
 
 	tintOptions := &tint.Options{
-		Level:      logLevel,
-		TimeFormat: time.RFC3339,
+		Level:       logLevel,
+		TimeFormat:  time.RFC3339,
+		ReplaceAttr: replaceAttr,
 	}
 	tintHandler := tint.NewHandler(os.Stderr, tintOptions)
+
+	_ = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource:   false,
+		Level:       logLevel,
+		ReplaceAttr: replaceAttr,
+	})
 
 	logger := slog.New(tintHandler)
 	slog.SetDefault(logger)
 	return logger
+}
+
+func replaceAttr(_ []string, attr slog.Attr) slog.Attr {
+	switch attr.Value.Kind() {
+	case slog.KindAny:
+		switch v := attr.Value.Any().(type) {
+		case error:
+			// Errors are formatted with a stacktrace.
+			attr.Value = formatErrWithStackTrace(v)
+
+		default:
+			// Does nothing but satisfy linter.
+		}
+
+	default:
+		// Does nothing but satisfy linter.
+	}
+
+	return attr
 }

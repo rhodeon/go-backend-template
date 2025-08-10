@@ -2,9 +2,8 @@ package database
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
+	"github.com/go-errors/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -25,7 +24,7 @@ type Tx struct {
 func (tx *Tx) Savepoint(ctx context.Context) (func(ctx context.Context) error, error) {
 	sp, err := tx.innerTx.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("starting transaction savepoint: %w", err)
+		return nil, errors.Errorf("starting transaction savepoint: %w", err)
 	}
 	return tx.rollbackSavepoint(sp), nil
 }
@@ -34,7 +33,7 @@ func (tx *Tx) rollbackSavepoint(sp pgx.Tx) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		// If the transaction is already closed, the error can be ignored.
 		if err := sp.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			return fmt.Errorf("rolling back transaction savepoint: %w", err)
+			return errors.Errorf("rolling back transaction savepoint: %w", err)
 		}
 		return nil
 	}
