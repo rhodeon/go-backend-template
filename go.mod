@@ -6,6 +6,7 @@ require (
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/danielgtaylor/huma/v2 v2.34.1
 	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-errors/errors v1.5.1
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.6.0
