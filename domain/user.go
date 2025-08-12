@@ -15,6 +15,7 @@ type User struct {
 	FirstName   string
 	LastName    string
 	PhoneNumber string
+	IsVerified  bool
 	// Password is the hashed password for an already existing user.
 	Password  string
 	CreatedAt time.Time

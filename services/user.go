@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -22,13 +21,13 @@ type User struct {
 
 var userService *User
 
-func newUser(repos *repositories.Repositories) *User {
-	userService = &User{newService(repos)}
+func newUser(repos *repositories.Repositories, cfg *Config) *User {
+	userService = &User{newService(repos, cfg)}
 	return userService
 }
 
 func (u *User) Create(ctx context.Context, dbTx *database.Tx, user domain.User) (domain.User, error) {
-	hashedPassword, err := u.hashPassword(user.Password)
+	hashedPassword, err := authService.hashPassword(user.Password)
 	if err != nil {
 		return domain.User{}, errors.Errorf("hashing password: %w", err)
 	}
@@ -72,11 +71,38 @@ func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (do
 	return domain.NewUser.FromDbUser(dbUser), nil
 }
 
-func (u *User) hashPassword(password string) (string, error) {
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+// Verify verifies a user's email using the given one-time password (OTP), and either updates their verification status or returns an error.
+// Errors:
+// - domain.ErrUserNotFound
+// - domain.ErrUserAlreadyVerified
+// - domain.ErrAuthInvalidOtp
+func (u *User) Verify(ctx context.Context, dbTx *database.Tx, email string, otp string) error {
+	dbUser, err := u.repos.Database.Users.GetByEmail(ctx, dbTx, email)
 	if err != nil {
-		return "", errors.Errorf("generating password with bcrypt: %w", err)
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return domain.UserErrNotFound("email", email)
+
+		default:
+			return errors.Errorf("getting user with email %q from database: %w", email, err)
+		}
 	}
 
-	return string(passwordHash), nil
+	if dbUser.IsVerified {
+		return domain.UserErrAlreadyVerified(dbUser.Id)
+	}
+
+	isValidToken, err := authService.ValidateOtp(ctx, otp, dbUser.Id)
+	if err != nil {
+		return errors.Errorf("validating otp: %w", err)
+	}
+	if !isValidToken {
+		return domain.ErrAuthInvalidOtp
+	}
+
+	if err := u.repos.Database.Users.Verify(ctx, dbTx, dbUser.Id); err != nil {
+		return errors.Errorf("verifying user with id %q in database: %w", dbUser.Id, err)
+	}
+
+	return nil
 }

@@ -19,11 +19,11 @@ RETURNING *;
 
 -- name: GetById :one
 SELECT *
-FROM users
+FROM public.users
 WHERE id = @id;
 
 -- name: Update :one
-UPDATE users
+UPDATE public.users
 SET
   email = @email,
   username = @username
@@ -32,6 +32,17 @@ RETURNING *;
 
 -- name: Delete :one
 DELETE
-FROM users
+FROM public.users
 WHERE id = @id
 RETURNING *;
+
+-- name: GetByEmail :one
+SELECT *
+FROM public.users
+WHERE email = @email;
+
+
+-- name: Verify :exec
+UPDATE public.users
+SET is_verified = TRUE
+WHERE id = @id;

@@ -13,7 +13,9 @@ type Config struct {
 	Environment string `env:"ENVIRONMENT" envDefault:"Development"`
 	DebugMode   bool   `env:"DEBUG_MODE" envDefault:"false"`
 	Database    DatabaseConfig
+	Cache       CacheConfig
 	Server      ServerConfig
+	Auth        AuthConfig
 }
 
 func ParseConfig() *Config {
@@ -49,4 +51,20 @@ type DatabaseConfig struct {
 	MaxConns        int32         `env:"DB_MAX_CONNECTIONS" envDefault:"25"`
 	MaxConnLifetime time.Duration `env:"DB_MAX_CONNECTION_LIFETIME" envDefault:"2h"`
 	MaxConnIdleTime time.Duration `env:"DB_MAX_CONNECTION_IDLE_TIME" envDefault:"5m"`
+}
+
+type CacheConfig struct {
+	Host     string `env:"CACHE_HOST" envDefault:"localhost"`
+	Port     int    `env:"CACHE_PORT" envDefault:"6379"`
+	Password string `env:"CACHE_PASSWORD" envDefault:""`
+	Database int    `env:"CACHE_DATABASE" envDefault:"0"`
+}
+
+type AuthConfig struct {
+	JwtIssuer               string        `env:"AUTH_JWT_ISSUER" envDefault:"go-backend-template"`
+	JwtAccessTokenSecret    string        `env:"AUTH_JWT_ACCESS_TOKEN_SECRET"`
+	JwtRefreshTokenSecret   string        `env:"AUTH_JWT_REFRESH_TOKEN_SECRET"`
+	JwtAccessTokenDuration  time.Duration `env:"AUTH_JWT_ACCESS_TOKEN_DURATION" envDefault:"1h"`
+	JwtRefreshTokenDuration time.Duration `env:"AUTH_JWT_REFRESH_TOKEN_DURATION" envDefault:"12h"`
+	OtpDuration             time.Duration `env:"AUTH_OTP_DURATION" envDefault:"30s"`
 }

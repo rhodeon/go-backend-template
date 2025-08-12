@@ -24,19 +24,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 	huma.Register(
 		api,
 		huma.Operation{
-			OperationID: "users-create",
-			Method:      http.MethodPost,
-			Path:        "",
-			Tags:        []string{"users"},
-			Description: "This can only be done by the logged in user.",
-			Summary:     "Create user",
-		},
-		h.create,
-	)
-
-	huma.Register(
-		api,
-		huma.Operation{
 			OperationID: "users-get",
 			Method:      http.MethodGet,
 			Path:        "/{user_id}",

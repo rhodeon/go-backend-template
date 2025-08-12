@@ -28,7 +28,7 @@ VALUES (
   $5,
   $6
 )
-RETURNING id, email, username, first_name, last_name, phone_number, hashed_password, created_at, updated_at
+RETURNING id, email, username, first_name, last_name, phone_number, is_verified, hashed_password, created_at, updated_at
 `
 
 type CreateParams struct {
@@ -57,6 +57,7 @@ func (q *Queries) Create(ctx context.Context, db DBTX, arg CreateParams) (User, 
 		&i.FirstName,
 		&i.LastName,
 		&i.PhoneNumber,
+		&i.IsVerified,
 		&i.HashedPassword,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -66,9 +67,9 @@ func (q *Queries) Create(ctx context.Context, db DBTX, arg CreateParams) (User, 
 
 const delete = `-- name: Delete :one
 DELETE
-FROM users
+FROM public.users
 WHERE id = $1
-RETURNING id, email, username, first_name, last_name, phone_number, hashed_password, created_at, updated_at
+RETURNING id, email, username, first_name, last_name, phone_number, is_verified, hashed_password, created_at, updated_at
 `
 
 func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
@@ -81,6 +82,31 @@ func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
 		&i.FirstName,
 		&i.LastName,
 		&i.PhoneNumber,
+		&i.IsVerified,
+		&i.HashedPassword,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getByEmail = `-- name: GetByEmail :one
+SELECT id, email, username, first_name, last_name, phone_number, is_verified, hashed_password, created_at, updated_at
+FROM public.users
+WHERE email = $1
+`
+
+func (q *Queries) GetByEmail(ctx context.Context, db DBTX, email string) (User, error) {
+	row := db.QueryRow(ctx, getByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.Id,
+		&i.Email,
+		&i.Username,
+		&i.FirstName,
+		&i.LastName,
+		&i.PhoneNumber,
+		&i.IsVerified,
 		&i.HashedPassword,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -89,8 +115,8 @@ func (q *Queries) Delete(ctx context.Context, db DBTX, id int64) (User, error) {
 }
 
 const getById = `-- name: GetById :one
-SELECT id, email, username, first_name, last_name, phone_number, hashed_password, created_at, updated_at
-FROM users
+SELECT id, email, username, first_name, last_name, phone_number, is_verified, hashed_password, created_at, updated_at
+FROM public.users
 WHERE id = $1
 `
 
@@ -104,6 +130,7 @@ func (q *Queries) GetById(ctx context.Context, db DBTX, id int64) (User, error) 
 		&i.FirstName,
 		&i.LastName,
 		&i.PhoneNumber,
+		&i.IsVerified,
 		&i.HashedPassword,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -112,12 +139,12 @@ func (q *Queries) GetById(ctx context.Context, db DBTX, id int64) (User, error) 
 }
 
 const update = `-- name: Update :one
-UPDATE users
+UPDATE public.users
 SET
   email = $1,
   username = $2
 WHERE id = $3
-RETURNING id, email, username, first_name, last_name, phone_number, hashed_password, created_at, updated_at
+RETURNING id, email, username, first_name, last_name, phone_number, is_verified, hashed_password, created_at, updated_at
 `
 
 type UpdateParams struct {
@@ -136,9 +163,21 @@ func (q *Queries) Update(ctx context.Context, db DBTX, arg UpdateParams) (User, 
 		&i.FirstName,
 		&i.LastName,
 		&i.PhoneNumber,
+		&i.IsVerified,
 		&i.HashedPassword,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const verify = `-- name: Verify :exec
+UPDATE public.users
+SET is_verified = TRUE
+WHERE id = $1
+`
+
+func (q *Queries) Verify(ctx context.Context, db DBTX, id int64) error {
+	_, err := db.Exec(ctx, verify, id)
+	return err
 }

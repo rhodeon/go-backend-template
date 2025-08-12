@@ -1,4 +1,4 @@
-package users
+package auth
 
 import (
 	"context"
@@ -11,12 +11,12 @@ import (
 	"github.com/go-errors/errors"
 )
 
-type CreateRequest struct {
-	Body CreateRequestBody
+type RegisterRequest struct {
+	Body RegisterRequestBody
 }
 
-type CreateRequestBody struct {
-	Email       string `json:"email" required:"true" example:"johndoe@example.com" minLength:"3"`
+type RegisterRequestBody struct {
+	Email       string `json:"email" required:"true" format:"email" example:"johndoe@example.com" minLength:"3"`
 	Username    string `json:"username" required:"true" example:"johndoe" minLength:"3"`
 	FirstName   string `json:"first_name" required:"true" example:"John" minLength:"1"`
 	LastName    string `json:"last_name" required:"true" example:"Doe" minLength:"1"`
@@ -24,11 +24,11 @@ type CreateRequestBody struct {
 	Password    string `json:"password" required:"true" example:"password" minLength:"6"`
 }
 
-type CreateResponse struct {
+type RegisterResponse struct {
 	Body responses.Envelope[responses.User]
 }
 
-func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateResponse, error) {
+func (h *Handlers) register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
 	dbTx, commit, rollback, err := h.app.Db.BeginTx(ctx)
 	if err != nil {
 		return nil, apierrors.UntypedError(ctx, err)
@@ -58,11 +58,18 @@ func (h *Handlers) create(ctx context.Context, req *CreateRequest) (*CreateRespo
 
 	respData := responses.NewUser.FromDomainUser(createdUser)
 
+	_, err = h.app.Services.Auth.GenerateOtp(ctx, createdUser.Id)
+	if err != nil {
+		return nil, apierrors.UntypedError(ctx, err)
+	}
+
 	if err := commit(ctx); err != nil {
 		return nil, apierrors.UntypedError(ctx, err)
 	}
 
-	return &CreateResponse{
+	// TODO: Send welcome email with OTP.
+
+	return &RegisterResponse{
 		Body: responses.Success(respData),
 	}, nil
 }

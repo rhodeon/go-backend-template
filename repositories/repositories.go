@@ -1,15 +1,18 @@
 package repositories
 
 import (
+	"github.com/rhodeon/go-backend-template/repositories/cache"
 	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
 )
 
 type Repositories struct {
 	Database *postgres.Repository
+	Cache    cache.Cache
 }
 
-func New() *Repositories {
+func New(cacheRepo cache.Cache) *Repositories {
 	return &Repositories{
-		Database: postgres.NewRepository(),
+		postgres.NewRepository(),
+		cacheRepo,
 	}
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/rhodeon/go-backend-template/cmd/api/handlers/auth"
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers/pets"
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers/store"
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers/users"
@@ -13,6 +14,7 @@ import (
 
 type handlers struct {
 	app   *internal.Application
+	auth  *auth.Handlers
 	store *store.Handlers
 	users *users.Handlers
 	pets  *pets.Handlers
@@ -21,6 +23,7 @@ type handlers struct {
 func Setup(app *internal.Application, api huma.API) {
 	h := &handlers{
 		app,
+		auth.New(app, api),
 		store.New(app, api),
 		users.New(app, api),
 		pets.New(app, api),

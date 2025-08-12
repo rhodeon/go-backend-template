@@ -20,7 +20,7 @@ func main() {
 	cfg := internal.ParseConfig()
 	logger := log.NewLogger(cfg.DebugMode)
 
-	dbConfig := database.Config(*cfg.Database)
+	dbConfig := database.Config(cfg.Database)
 	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
 	if err != nil {
 		panic(err)
@@ -46,10 +46,11 @@ func main() {
 
 func setupRepositories(ctx context.Context, cfg *internal.Config) (*repositories.Repositories, error) {
 	cache, err := redis.NewCache(ctx, &redis.Config{
-		Host:     cfg.Cache.Host,
-		Port:     cfg.Cache.Port,
-		Password: cfg.Cache.Password,
-		Database: cfg.Cache.Database,
+		Host:        cfg.Cache.Host,
+		Port:        cfg.Cache.Port,
+		Password:    cfg.Cache.Password,
+		Database:    cfg.Cache.Database,
+		OtpDuration: cfg.Auth.OtpDuration,
 	})
 	if err != nil {
 		return nil, errors.Errorf("setting up redis: %w", err)

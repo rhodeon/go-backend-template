@@ -12,6 +12,11 @@ var (
 	ErrUserNotFound          = errors.New("")
 	ErrUserDuplicateEmail    = errors.New("")
 	ErrUserDuplicateUsername = errors.New("")
+	ErrUserAlreadyVerified   = errors.New("")
+
+	ErrAuthExpiredToken = errors.New("auth token has expired")
+	ErrAuthInvalidToken = errors.New("auth token is invalid")
+	ErrAuthInvalidOtp   = errors.New("otp is invalid")
 )
 
 // embedBaseErrorf injects the underlying domain error into a new error generated from the format and args.
@@ -28,6 +33,10 @@ func UserErrNotFound(field string, value any) error {
 
 func UserErrDuplicateEmail(email string) error {
 	return embedBaseErrorf(ErrUserDuplicateEmail, "user with email %q already exists", email)
+}
+
+func UserErrAlreadyVerified(id int64) error {
+	return embedBaseErrorf(ErrUserAlreadyVerified, "user with id %q is already verified", id)
 }
 
 func UserErrDuplicateUsername(username string) error {

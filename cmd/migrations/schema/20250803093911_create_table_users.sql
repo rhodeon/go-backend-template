@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   first_name      text NOT NULL,
   last_name       text NOT NULL,
   phone_number    text,
+  is_verified     boolean NOT NULL DEFAULT FALSE,
   hashed_password text NOT NULL,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()
