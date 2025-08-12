@@ -9,7 +9,10 @@ import (
 	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/internal/log"
 	"github.com/rhodeon/go-backend-template/repositories"
+	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
 	"github.com/rhodeon/go-backend-template/services"
+
+	"github.com/go-errors/errors"
 )
 
 func main() {
@@ -17,16 +20,18 @@ func main() {
 	cfg := internal.ParseConfig()
 	logger := log.NewLogger(cfg.DebugMode)
 
-	dbConfig := database.Config(cfg.Database)
+	dbConfig := database.Config(*cfg.Database)
 	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
 	if err != nil {
 		panic(err)
 	}
 	defer closeDb()
 
-	repos := repositories.New()
-	svcs := services.New(repos)
-
+	repos, err := setupRepositories(mainCtx, cfg)
+	if err != nil {
+		panic(err)
+	}
+	svcs := setupServices(mainCtx, cfg, repos)
 	app := internal.NewApplication(cfg, logger, db, svcs)
 
 	// A waitgroup is established to ensure background tasks are completed before shutting down the server.
@@ -37,4 +42,35 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func setupRepositories(ctx context.Context, cfg *internal.Config) (*repositories.Repositories, error) {
+	cache, err := redis.NewCache(ctx, &redis.Config{
+		Host:     cfg.Cache.Host,
+		Port:     cfg.Cache.Port,
+		Password: cfg.Cache.Password,
+		Database: cfg.Cache.Database,
+	})
+	if err != nil {
+		return nil, errors.Errorf("setting up redis: %w", err)
+	}
+
+	repos := repositories.New(cache)
+	return repos, nil
+}
+
+func setupServices(_ context.Context, cfg *internal.Config, repos *repositories.Repositories) *services.Services {
+	servicesCfg := &services.Config{
+		Auth: &services.AuthConfig{
+			JwtIssuer:               cfg.Auth.JwtIssuer,
+			JwtAccessTokenSecret:    cfg.Auth.JwtAccessTokenSecret,
+			JwtRefreshTokenSecret:   cfg.Auth.JwtRefreshTokenSecret,
+			JwtAccessTokenDuration:  cfg.Auth.JwtAccessTokenDuration,
+			JwtRefreshTokenDuration: cfg.Auth.JwtRefreshTokenDuration,
+			OtpDuration:             cfg.Auth.OtpDuration,
+		},
+	}
+
+	svcs := services.New(repos, servicesCfg)
+	return svcs
 }
