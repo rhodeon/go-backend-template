@@ -8,4 +8,6 @@ const (
 	AttrSignal     = "signal"
 	AttrEnv        = "env"
 	AttrPort       = "port"
+	AttrRecipient  = "recipient"
+	AttrOtp        = "otp"
 )
