@@ -119,7 +119,7 @@ func (a *Auth) GenerateOtp(ctx context.Context, userId int64) (string, error) {
 	code := n.Int64() + 100000
 	codeStr := strconv.FormatInt(code, 10)
 
-	if err := a.repos.Cache.SetOtp(ctx, codeStr, userId); err != nil {
+	if err := a.repos.Cache.SetOtp(ctx, userId, codeStr); err != nil {
 		return "", errors.Errorf("caching otp: %w", err)
 	}
 
@@ -127,8 +127,8 @@ func (a *Auth) GenerateOtp(ctx context.Context, userId int64) (string, error) {
 }
 
 // ValidateOtp verifies if the provided OTP matches the stored code for the given user ID and clears it upon success.
-func (a *Auth) ValidateOtp(ctx context.Context, code string, userId int64) (bool, error) {
-	savedId, exists, err := a.repos.Cache.GetUserIdFromOtp(ctx, code)
+func (a *Auth) ValidateOtp(ctx context.Context, userId int64, otp string) (bool, error) {
+	cachedOtp, exists, err := a.repos.Cache.GetOtp(ctx, userId)
 	if err != nil {
 		return false, errors.Errorf("retrieving user id from otp: %w", err)
 	}
@@ -136,9 +136,9 @@ func (a *Auth) ValidateOtp(ctx context.Context, code string, userId int64) (bool
 		return false, nil
 	}
 
-	valid := savedId == userId
+	valid := otp == cachedOtp
 	if valid {
-		if err := a.repos.Cache.ClearOtp(ctx, code); err != nil {
+		if err := a.repos.Cache.ClearOtp(ctx, userId); err != nil {
 			return false, errors.Errorf("clearing otp: %w", err)
 		}
 	}

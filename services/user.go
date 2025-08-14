@@ -125,7 +125,7 @@ func (u *User) Verify(ctx context.Context, dbTx *database.Tx, email string, otp 
 		return domain.UserErrAlreadyVerified(user.Id)
 	}
 
-	isValidToken, err := authService.ValidateOtp(ctx, otp, user.Id)
+	isValidToken, err := authService.ValidateOtp(ctx, user.Id, otp)
 	if err != nil {
 		return errors.Errorf("validating otp: %w", err)
 	}

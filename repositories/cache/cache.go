@@ -3,7 +3,7 @@ package cache
 import "context"
 
 type Cache interface {
-	SetOtp(ctx context.Context, code string, userId int64) error
-	GetUserIdFromOtp(ctx context.Context, code string) (int64, bool, error)
-	ClearOtp(ctx context.Context, code string) error
+	SetOtp(ctx context.Context, userId int64, code string) error
+	GetOtp(ctx context.Context, userId int64) (string, bool, error)
+	ClearOtp(ctx context.Context, userId int64) error
 }

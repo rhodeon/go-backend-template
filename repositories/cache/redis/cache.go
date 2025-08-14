@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/rhodeon/go-backend-template/repositories/cache"
@@ -32,37 +33,37 @@ func New(ctx context.Context, cfg *Config) (cache.Cache, error) {
 	}, nil
 }
 
-func (c *Cache) SetOtp(ctx context.Context, code string, userId int64) error {
-	if err := c.client.Set(ctx, c.buildOtpKey(code), userId, c.config.OtpDuration).Err(); err != nil {
+func (c *Cache) SetOtp(ctx context.Context, userId int64, code string) error {
+	if err := c.client.Set(ctx, c.buildOtpKey(userId), code, c.config.OtpDuration).Err(); err != nil {
 		return errors.Errorf("setting otp in redis: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Cache) GetUserIdFromOtp(ctx context.Context, code string) (int64, bool, error) {
-	userId, err := c.client.Get(ctx, c.buildOtpKey(code)).Int64()
+func (c *Cache) GetOtp(ctx context.Context, userId int64) (string, bool, error) {
+	otp, err := c.client.Get(ctx, c.buildOtpKey(userId)).Result()
 	if err != nil {
 		switch {
 		case errors.Is(err, redis.Nil):
-			return 0, false, nil
+			return "", false, nil
 
 		default:
-			return 0, false, errors.Errorf("getting user from otp in redis: %w", err)
+			return "", false, errors.Errorf("getting otp from in redis: %w", err)
 		}
 	}
 
-	return userId, true, nil
+	return otp, true, nil
 }
 
-func (c *Cache) ClearOtp(ctx context.Context, code string) error {
-	if err := c.client.Del(ctx, c.buildOtpKey(code)).Err(); err != nil {
+func (c *Cache) ClearOtp(ctx context.Context, userId int64) error {
+	if err := c.client.Del(ctx, c.buildOtpKey(userId)).Err(); err != nil {
 		return errors.Errorf("deleting otp from redis: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Cache) buildOtpKey(code string) string {
-	return namespaceOtp + ":" + code
+func (c *Cache) buildOtpKey(userId int64) string {
+	return fmt.Sprintf("%s:%d", namespaceOtp, userId)
 }
