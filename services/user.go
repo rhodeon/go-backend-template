@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -71,6 +72,36 @@ func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (do
 	return domain.NewUser.FromDbUser(dbUser), nil
 }
 
+func (u *User) GetByEmail(ctx context.Context, dbTx *database.Tx, email string) (domain.User, error) {
+	dbUser, err := u.repos.Database.Users.GetByEmail(ctx, dbTx, email)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return domain.User{}, domain.UserErrNotFound("email", email)
+
+		default:
+			return domain.User{}, errors.Errorf("getting user with email %q from database: %w", email, err)
+		}
+	}
+
+	return domain.NewUser.FromDbUser(dbUser), nil
+}
+
+func (u *User) GetByUsername(ctx context.Context, dbTx *database.Tx, username string) (domain.User, error) {
+	dbUser, err := u.repos.Database.Users.GetByUsername(ctx, dbTx, username)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return domain.User{}, domain.UserErrNotFound("username", username)
+
+		default:
+			return domain.User{}, errors.Errorf("getting user with username %q from database: %w", username, err)
+		}
+	}
+
+	return domain.NewUser.FromDbUser(dbUser), nil
+}
+
 func (u *User) SendVerificationEmail(ctx context.Context, user domain.User, otp string) error {
 	if err := u.repos.Email.SendVerificationEmail(ctx, user.Email, otp); err != nil {
 		return errors.Errorf("sending verification email: %w", err)
@@ -85,22 +116,16 @@ func (u *User) SendVerificationEmail(ctx context.Context, user domain.User, otp 
 // - domain.ErrUserAlreadyVerified
 // - domain.ErrAuthInvalidOtp
 func (u *User) Verify(ctx context.Context, dbTx *database.Tx, email string, otp string) error {
-	dbUser, err := u.repos.Database.Users.GetByEmail(ctx, dbTx, email)
+	user, err := u.GetByEmail(ctx, dbTx, email)
 	if err != nil {
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-			return domain.UserErrNotFound("email", email)
-
-		default:
-			return errors.Errorf("getting user with email %q from database: %w", email, err)
-		}
+		return err
 	}
 
-	if dbUser.IsVerified {
-		return domain.UserErrAlreadyVerified(dbUser.Id)
+	if user.IsVerified {
+		return domain.UserErrAlreadyVerified(user.Id)
 	}
 
-	isValidToken, err := authService.ValidateOtp(ctx, otp, dbUser.Id)
+	isValidToken, err := authService.ValidateOtp(ctx, otp, user.Id)
 	if err != nil {
 		return errors.Errorf("validating otp: %w", err)
 	}
@@ -108,9 +133,17 @@ func (u *User) Verify(ctx context.Context, dbTx *database.Tx, email string, otp 
 		return domain.ErrAuthInvalidOtp
 	}
 
-	if err := u.repos.Database.Users.Verify(ctx, dbTx, dbUser.Id); err != nil {
-		return errors.Errorf("verifying user with id %q in database: %w", dbUser.Id, err)
+	if err := u.repos.Database.Users.Verify(ctx, dbTx, user.Id); err != nil {
+		return errors.Errorf("verifying user with id %q in database: %w", user.Id, err)
 	}
 
+	return nil
+}
+
+func (u *User) VerifyPassword(password string, passwordHash string) error {
+	err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	if err != nil {
+		return errors.Errorf("verifying password: %w", err)
+	}
 	return nil
 }

@@ -21,7 +21,7 @@ type RegisterRequestBody struct {
 	FirstName   string `json:"first_name" required:"true" example:"John" minLength:"1"`
 	LastName    string `json:"last_name" required:"true" example:"Doe" minLength:"1"`
 	PhoneNumber string `json:"phone_number" required:"false" minLength:"1"`
-	Password    string `json:"password" required:"true" example:"password" minLength:"6"`
+	Password    string `json:"password" required:"true" example:"123456" minLength:"6"`
 }
 
 type RegisterResponse struct {
@@ -56,8 +56,6 @@ func (h *Handlers) register(ctx context.Context, req *RegisterRequest) (*Registe
 		}
 	}
 
-	respData := responses.NewUser.FromDomainUser(createdUser)
-
 	otp, err := h.app.Services.Auth.GenerateOtp(ctx, createdUser.Id)
 	if err != nil {
 		return nil, apierrors.UntypedError(ctx, err)
@@ -70,6 +68,8 @@ func (h *Handlers) register(ctx context.Context, req *RegisterRequest) (*Registe
 	if err := h.app.Services.User.SendVerificationEmail(ctx, createdUser, otp); err != nil {
 		return nil, apierrors.UntypedError(ctx, err)
 	}
+
+	respData := responses.NewUser.FromDomainUser(createdUser)
 
 	return &RegisterResponse{
 		Body: responses.Success(respData),

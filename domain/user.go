@@ -31,6 +31,7 @@ func (u User) FromDbUser(dbUser dbusers.User) User {
 		LastName:    dbUser.LastName,
 		PhoneNumber: dbUser.PhoneNumber.String,
 		Password:    dbUser.HashedPassword,
+		IsVerified:  dbUser.IsVerified,
 		CreatedAt:   dbUser.CreatedAt,
 		UpdatedAt:   dbUser.UpdatedAt,
 	}

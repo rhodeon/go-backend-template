@@ -41,6 +41,11 @@ SELECT *
 FROM public.users
 WHERE email = @email;
 
+-- name: GetByUsername :one
+SELECT *
+FROM public.users
+WHERE username = @username;
+
 
 -- name: Verify :exec
 UPDATE public.users

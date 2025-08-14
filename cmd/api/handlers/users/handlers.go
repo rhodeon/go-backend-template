@@ -76,19 +76,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 	huma.Register(
 		api,
 		huma.Operation{
-			OperationID: "users-login",
-			Method:      http.MethodPost,
-			Path:        "/login",
-			Tags:        []string{"users"},
-			Summary:     "Logs user into the system",
-			Description: "Log into the system.",
-		},
-		h.login,
-	)
-
-	huma.Register(
-		api,
-		huma.Operation{
 			OperationID: "users-logout",
 			Method:      http.MethodPost,
 			Path:        "/logout",

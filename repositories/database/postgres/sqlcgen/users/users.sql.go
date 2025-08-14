@@ -138,6 +138,30 @@ func (q *Queries) GetById(ctx context.Context, db DBTX, id int64) (User, error) 
 	return i, err
 }
 
+const getByUsername = `-- name: GetByUsername :one
+SELECT id, email, username, first_name, last_name, phone_number, is_verified, hashed_password, created_at, updated_at
+FROM public.users
+WHERE username = $1
+`
+
+func (q *Queries) GetByUsername(ctx context.Context, db DBTX, username string) (User, error) {
+	row := db.QueryRow(ctx, getByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.Id,
+		&i.Email,
+		&i.Username,
+		&i.FirstName,
+		&i.LastName,
+		&i.PhoneNumber,
+		&i.IsVerified,
+		&i.HashedPassword,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const update = `-- name: Update :one
 UPDATE public.users
 SET

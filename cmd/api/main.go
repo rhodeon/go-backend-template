@@ -38,7 +38,7 @@ func main() {
 	// A waitgroup is established to ensure background tasks are completed before shutting down the server.
 	backgroundWg := &sync.WaitGroup{}
 
-	// Start server. The listen chan isn't used here and is buffered to 1 so the server won't be blocked.
+	// The listen chan isn't used here and is buffered to 1 so the server won't be blocked.
 	err = server.ServeApi(app, backgroundWg, make(chan<- int, 1))
 	if err != nil {
 		panic(err)
