@@ -6,13 +6,13 @@ import (
 )
 
 type Repositories struct {
-	Database *postgres.Repository
+	Database *postgres.Database
 	Cache    cache.Cache
 }
 
 func New(cacheRepo cache.Cache) *Repositories {
 	return &Repositories{
-		postgres.NewRepository(),
+		postgres.NewDatabase(),
 		cacheRepo,
 	}
 }

@@ -4,12 +4,12 @@ import (
 	dbusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
 )
 
-type Repository struct {
+type Database struct {
 	Users *dbusers.Queries
 }
 
-func NewRepository() *Repository {
-	return &Repository{
+func NewDatabase() *Database {
+	return &Database{
 		Users: dbusers.New(),
 	}
 }
