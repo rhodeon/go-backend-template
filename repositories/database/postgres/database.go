@@ -8,7 +8,7 @@ type Database struct {
 	Users *dbusers.Queries
 }
 
-func NewDatabase() *Database {
+func New() *Database {
 	return &Database{
 		Users: dbusers.New(),
 	}

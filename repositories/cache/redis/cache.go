@@ -15,7 +15,7 @@ type Cache struct {
 	config *Config
 }
 
-func NewCache(ctx context.Context, cfg *Config) (cache.Cache, error) {
+func New(ctx context.Context, cfg *Config) (cache.Cache, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     cfg.Host + ":" + strconv.Itoa(cfg.Port),
 		Password: cfg.Password,

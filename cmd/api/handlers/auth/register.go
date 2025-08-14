@@ -58,7 +58,7 @@ func (h *Handlers) register(ctx context.Context, req *RegisterRequest) (*Registe
 
 	respData := responses.NewUser.FromDomainUser(createdUser)
 
-	_, err = h.app.Services.Auth.GenerateOtp(ctx, createdUser.Id)
+	otp, err := h.app.Services.Auth.GenerateOtp(ctx, createdUser.Id)
 	if err != nil {
 		return nil, apierrors.UntypedError(ctx, err)
 	}
@@ -67,7 +67,9 @@ func (h *Handlers) register(ctx context.Context, req *RegisterRequest) (*Registe
 		return nil, apierrors.UntypedError(ctx, err)
 	}
 
-	// TODO: Send welcome email with OTP.
+	if err := h.app.Services.User.SendVerificationEmail(ctx, createdUser, otp); err != nil {
+		return nil, apierrors.UntypedError(ctx, err)
+	}
 
 	return &RegisterResponse{
 		Body: responses.Success(respData),

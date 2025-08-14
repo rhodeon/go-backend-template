@@ -10,6 +10,7 @@ import (
 	"github.com/rhodeon/go-backend-template/internal/log"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
+	"github.com/rhodeon/go-backend-template/repositories/email/smtp"
 	"github.com/rhodeon/go-backend-template/services"
 
 	"github.com/go-errors/errors"
@@ -45,7 +46,7 @@ func main() {
 }
 
 func setupRepositories(ctx context.Context, cfg *internal.Config) (*repositories.Repositories, error) {
-	cache, err := redis.NewCache(ctx, &redis.Config{
+	cache, err := redis.New(ctx, &redis.Config{
 		Host:        cfg.Cache.Host,
 		Port:        cfg.Cache.Port,
 		Password:    cfg.Cache.Password,
@@ -56,7 +57,19 @@ func setupRepositories(ctx context.Context, cfg *internal.Config) (*repositories
 		return nil, errors.Errorf("setting up redis: %w", err)
 	}
 
-	repos := repositories.New(cache)
+	email, err := smtp.New(ctx, &smtp.Config{
+		Host:        cfg.Smtp.Host,
+		Port:        cfg.Smtp.Port,
+		User:        cfg.Smtp.User,
+		Password:    cfg.Smtp.Password,
+		Sender:      cfg.Smtp.Sender,
+		OtpDuration: cfg.Auth.OtpDuration,
+	})
+	if err != nil {
+		return nil, errors.Errorf("setting up smtp email repo: %w", err)
+	}
+
+	repos := repositories.New(cache, email)
 	return repos, nil
 }
 

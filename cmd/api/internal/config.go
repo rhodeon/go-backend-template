@@ -16,6 +16,7 @@ type Config struct {
 	Cache       CacheConfig
 	Server      ServerConfig
 	Auth        AuthConfig
+	Smtp        SmtpConfig
 }
 
 func ParseConfig() *Config {
@@ -67,4 +68,13 @@ type AuthConfig struct {
 	JwtAccessTokenDuration  time.Duration `env:"AUTH_JWT_ACCESS_TOKEN_DURATION" envDefault:"1h"`
 	JwtRefreshTokenDuration time.Duration `env:"AUTH_JWT_REFRESH_TOKEN_DURATION" envDefault:"12h"`
 	OtpDuration             time.Duration `env:"AUTH_OTP_DURATION" envDefault:"30s"`
+}
+
+type SmtpConfig struct {
+	Host        string `env:"SMTP_HOST" envDefault:"localhost"`
+	Port        int    `env:"SMTP_PORT" envDefault:"587"`
+	User        string `env:"SMTP_USER,required"`
+	Password    string `env:"SMTP_PASSWORD,required"`
+	Sender      string `env:"SMTP_SENDER,required"`
+	OtpDuration time.Duration
 }

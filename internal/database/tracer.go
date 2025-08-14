@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// tracer implements the pgx.QueryTracer interface to provider debugging and tracing capabilities for queries.
+// tracer implements the pgx.QueryTracer interface to provide debugging and tracing capabilities for queries.
 type tracer struct {
 	debugMode bool
 }

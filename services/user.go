@@ -71,6 +71,14 @@ func (u *User) GetById(ctx context.Context, dbTx *database.Tx, userId int64) (do
 	return domain.NewUser.FromDbUser(dbUser), nil
 }
 
+func (u *User) SendVerificationEmail(ctx context.Context, user domain.User, otp string) error {
+	if err := u.repos.Email.SendVerificationEmail(ctx, user.Email, otp); err != nil {
+		return errors.Errorf("sending verification email: %w", err)
+	}
+
+	return nil
+}
+
 // Verify verifies a user's email using the given one-time password (OTP), and either updates their verification status or returns an error.
 // Errors:
 // - domain.ErrUserNotFound

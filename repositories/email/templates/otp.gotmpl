@@ -1,0 +1,10 @@
+{{- /*gotype:github.com/rhodeon/go-backend-template/repositories/email.OtpTemplateData*/ -}}
+{{ .Subject }}
+==========================================
+
+This is a welcome message indeed.
+
+Your OTP: {{ .Otp }}
+
+Note:
+This OTP is valid for {{ .DurationInSeconds }} seconds and can only be used once.
