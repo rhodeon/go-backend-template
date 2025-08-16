@@ -15,12 +15,17 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+// containerName is the name of the global Postgres container to be shared across all test packages.
+// The UUID suffix is meant to reduce (practically eliminate) the chances of collision with another container.
+const containerName = "gobt-postgres-d0f8d875"
 
 const templateDbName = "test_template_db"
 
@@ -38,11 +43,14 @@ var testConfig = &database.Config{
 // SetupTestContainer establishes a Postgres instance in a container to be used for testing.
 // During this, a template database is also set up. All tests which need a database connection create one by first cloning the template database.
 // This is much faster than running the migrations for each test, especially when there's a lot of data involved.
-func SetupTestContainer(ctx context.Context, image string, projectRootDir string) (*tcpostgres.PostgresContainer, error) {
+// This container is truly "global". In order words, a single container is shared/reused across all test packages in the codebase.
+// Having a single shared container helps in cutting down the start-up time of tests and reduces the amount of resources (CPU and memory) used.
+func SetupTestContainer(ctx context.Context, image string, projectRootDir string) error {
 	goose.SetLogger(goose.NopLogger())
 
 	postgresContainer, err := tcpostgres.Run(ctx,
 		image,
+		testcontainers.WithReuseByName(containerName),
 		tcpostgres.WithDatabase(testConfig.Name),
 		tcpostgres.WithUsername(testConfig.User),
 		tcpostgres.WithPassword(testConfig.Pass),
@@ -52,25 +60,25 @@ func SetupTestContainer(ctx context.Context, image string, projectRootDir string
 				WithStartupTimeout(5*time.Second)),
 	)
 	if err != nil {
-		return nil, errors.Errorf("creating Postgres container instance: %w", err)
+		return errors.Errorf("creating Postgres container instance: %w", err)
 	}
 
 	mappedPort, err := postgresContainer.MappedPort(ctx, "5432")
 	if err != nil {
-		return nil, errors.Errorf("getting mapped Postgres container ports: %w", err)
+		return errors.Errorf("getting mapped Postgres container ports: %w", err)
 	}
 
 	testConfig.Port = mappedPort.Port()
 
 	if err = postgresContainer.Start(ctx); err != nil {
-		return nil, errors.Errorf("starting Postgres container: %w", err)
+		return errors.Errorf("starting Postgres container: %w", err)
 	}
 
 	if err := setupTemplateDb(ctx, projectRootDir); err != nil {
-		return nil, err
+		return err
 	}
 
-	return postgresContainer, nil
+	return nil
 }
 
 // setupTemplateDb generates and populates the template database which all tests with a dependency of the database clone.
@@ -80,8 +88,22 @@ func setupTemplateDb(ctx context.Context, projectRootDir string) error {
 		return errors.Errorf("connecting to initial database: %w", err)
 	}
 
+	// If the template database already exists, that means another test package has set it up, so it can be skipped here.
 	if _, err := initialDb.Pool().Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", templateDbName)); err != nil {
-		return errors.Errorf("creating template database: %w", err)
+		var errPg *pgconn.PgError
+		switch {
+		case errors.As(err, &errPg):
+			// Possible error codes when creating a database that already exists:
+			// - 42P04: duplicate_database
+			// - 23505: unique_violation (this occurs when the database hasn't been fully created, but its unique constraint has been established.)
+			// Reference: https://www.postgresql.org/docs/17/errcodes-appendix.html
+			if errPg.Code == "42P04" || errPg.Code == "23505" {
+				return nil
+			}
+
+		default:
+			return errors.Errorf("creating template database: %w", err)
+		}
 	}
 
 	closeInitialDb()

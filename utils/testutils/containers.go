@@ -3,10 +3,10 @@ package testutils
 import (
 	"context"
 
-	"github.com/go-errors/errors"
 	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
 	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
-	"github.com/testcontainers/testcontainers-go"
+
+	"github.com/go-errors/errors"
 )
 
 // ContainerOpts defines options for setting up containerised resources for integration tests.
@@ -17,36 +17,21 @@ type ContainerOpts struct {
 }
 
 // SetupContainers sets up the resources needed before running integration tests.
-func SetupContainers(ctx context.Context, opts ContainerOpts) (func(context.Context) error, error) {
-	var containers []testcontainers.Container
-
+// Since the containers are shared between all test packages, clean-up cannot be easily orchestrated internally.
+// Instead, the Testcontainers reaper process automatically handles the clean-up after all tests are done.
+// Reaper reference: https://golang.testcontainers.org/features/garbage_collector/#ryuk
+func SetupContainers(ctx context.Context, opts ContainerOpts) error {
 	if opts.Postgres {
-		postgresContainer, err := postgres.SetupTestContainer(ctx, config.PostgresImage, projectRootDir)
-		if err != nil {
-			return nil, errors.Errorf("setting up postgres container: %w", err)
+		if err := postgres.SetupTestContainer(ctx, config.PostgresImage, projectRootDir); err != nil {
+			return errors.Errorf("setting up postgres container: %w", err)
 		}
-		containers = append(containers, postgresContainer)
 	}
 
 	if opts.Redis {
-		redisContainer, err := redis.SetupTestContainer(ctx, config.RedisImage)
-		if err != nil {
-			return nil, errors.Errorf("setting up redis container: %w", err)
+		if err := redis.SetupTestContainer(ctx, config.RedisImage); err != nil {
+			return errors.Errorf("setting up redis container: %w", err)
 		}
-		containers = append(containers, redisContainer)
 	}
 
-	return terminateContainers(containers), nil
-}
-
-func terminateContainers(containers []testcontainers.Container) func(context.Context) error {
-	return func(ctx context.Context) error {
-		for _, container := range containers {
-			if err := container.Terminate(ctx); err != nil {
-				return errors.Errorf("terminating container: %w", err)
-			}
-		}
-
-		return nil
-	}
+	return nil
 }

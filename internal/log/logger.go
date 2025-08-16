@@ -58,6 +58,6 @@ func Fatal(logger *slog.Logger, message string, attrs ...slog.Attr) {
 		anyAttrs = append(anyAttrs, attr)
 	}
 
-	logger.Error(message, anyAttrs...)
+	logger.Error(message, anyAttrs...) //nolint:sloglint
 	os.Exit(1)
 }

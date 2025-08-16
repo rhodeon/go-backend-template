@@ -25,19 +25,12 @@ import (
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	logger := contextutils.GetLogger(ctx)
-	containerCleanup, err := testutils.SetupContainers(ctx, testutils.ContainerOpts{
+	if err := testutils.SetupContainers(ctx, testutils.ContainerOpts{
 		Postgres: true,
 		Redis:    true,
-	})
-	if err != nil {
+	}); err != nil {
 		log.Fatal(logger, "Failed to set up containers", slog.Any(log.AttrError, err))
 	}
-
-	defer func() {
-		if err := containerCleanup(context.Background()); err != nil {
-			panic(err)
-		}
-	}()
 
 	m.Run()
 }
