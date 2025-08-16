@@ -3,13 +3,15 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	_ "embed"
+	"errors"
 	"fmt"
 	"io"
-	"net"
 	"path/filepath"
 	"strings"
 
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/log"
 )
 
 const (
@@ -17,6 +19,9 @@ const (
 	defaultPassword     = "postgres"
 	defaultSnapshotName = "migrated_template"
 )
+
+//go:embed resources/customEntrypoint.sh
+var embeddedCustomEntrypoint string
 
 // PostgresContainer represents the postgres container type used in the module
 type PostgresContainer struct {
@@ -44,18 +49,13 @@ func (c *PostgresContainer) MustConnectionString(ctx context.Context, args ...st
 // which will be appended to the connection string. The format of the extra arguments is the same as the
 // connection string format, e.g. "connect_timeout=10" or "application_name=myapp"
 func (c *PostgresContainer) ConnectionString(ctx context.Context, args ...string) (string, error) {
-	containerPort, err := c.MappedPort(ctx, "5432/tcp")
-	if err != nil {
-		return "", err
-	}
-
-	host, err := c.Host(ctx)
+	endpoint, err := c.PortEndpoint(ctx, "5432/tcp", "")
 	if err != nil {
 		return "", err
 	}
 
 	extraArgs := strings.Join(args, "&")
-	connStr := fmt.Sprintf("postgres://%s:%s@%s/%s?%s", c.user, c.password, net.JoinHostPort(host, containerPort.Port()), c.dbName, extraArgs)
+	connStr := fmt.Sprintf("postgres://%s:%s@%s/%s?%s", c.user, c.password, endpoint, c.dbName, extraArgs)
 	return connStr, nil
 }
 
@@ -88,22 +88,37 @@ func WithDatabase(dbName string) testcontainers.CustomizeRequestOption {
 	}
 }
 
-// WithInitScripts sets the init scripts to be run when the container starts
+// WithInitScripts sets the init scripts to be run when the container starts.
+// These init scripts will be executed in sorted name order as defined by the container's current locale, which defaults to en_US.utf8.
+// If you need to run your scripts in a specific order, consider using `WithOrderedInitScripts` instead.
 func WithInitScripts(scripts ...string) testcontainers.CustomizeRequestOption {
-	return func(req *testcontainers.GenericContainerRequest) error {
-		initScripts := []testcontainers.ContainerFile{}
-		for _, script := range scripts {
-			cf := testcontainers.ContainerFile{
-				HostFilePath:      script,
-				ContainerFilePath: "/docker-entrypoint-initdb.d/" + filepath.Base(script),
-				FileMode:          0o755,
-			}
-			initScripts = append(initScripts, cf)
+	containerFiles := []testcontainers.ContainerFile{}
+	for _, script := range scripts {
+		initScript := testcontainers.ContainerFile{
+			HostFilePath:      script,
+			ContainerFilePath: "/docker-entrypoint-initdb.d/" + filepath.Base(script),
+			FileMode:          0o755,
 		}
-		req.Files = append(req.Files, initScripts...)
-
-		return nil
+		containerFiles = append(containerFiles, initScript)
 	}
+
+	return testcontainers.WithFiles(containerFiles...)
+}
+
+// WithOrderedInitScripts sets the init scripts to be run when the container starts.
+// The scripts will be run in the order that they are provided in this function.
+func WithOrderedInitScripts(scripts ...string) testcontainers.CustomizeRequestOption {
+	containerFiles := []testcontainers.ContainerFile{}
+	for idx, script := range scripts {
+		initScript := testcontainers.ContainerFile{
+			HostFilePath:      script,
+			ContainerFilePath: "/docker-entrypoint-initdb.d/" + fmt.Sprintf("%03d-%s", idx, filepath.Base(script)),
+			FileMode:          0o755,
+		}
+		containerFiles = append(containerFiles, initScript)
+	}
+
+	return testcontainers.WithFiles(containerFiles...)
 }
 
 // WithPassword sets the initial password of the user to be created when the container starts
@@ -136,7 +151,7 @@ func WithUsername(user string) testcontainers.CustomizeRequestOption {
 // Deprecated: use Run instead
 // RunContainer creates an instance of the Postgres container type
 func RunContainer(ctx context.Context, opts ...testcontainers.ContainerCustomizer) (*PostgresContainer, error) {
-	return Run(ctx, "docker.io/postgres:16-alpine", opts...)
+	return Run(ctx, "postgres:16-alpine", opts...)
 }
 
 // Run creates an instance of the Postgres container type
@@ -204,6 +219,43 @@ func WithSnapshotName(name string) SnapshotOption {
 	}
 }
 
+// WithSSLSettings configures the Postgres server to run with the provided CA Chain
+// This will not function if the corresponding postgres conf is not correctly configured.
+// Namely the paths below must match what is set in the conf file
+func WithSSLCert(caCertFile string, certFile string, keyFile string) testcontainers.CustomizeRequestOption {
+	const defaultPermission = 0o600
+
+	return func(req *testcontainers.GenericContainerRequest) error {
+		const entrypointPath = "/usr/local/bin/docker-entrypoint-ssl.bash"
+
+		req.Files = append(req.Files,
+			testcontainers.ContainerFile{
+				HostFilePath:      caCertFile,
+				ContainerFilePath: "/tmp/testcontainers-go/postgres/ca_cert.pem",
+				FileMode:          defaultPermission,
+			},
+			testcontainers.ContainerFile{
+				HostFilePath:      certFile,
+				ContainerFilePath: "/tmp/testcontainers-go/postgres/server.cert",
+				FileMode:          defaultPermission,
+			},
+			testcontainers.ContainerFile{
+				HostFilePath:      keyFile,
+				ContainerFilePath: "/tmp/testcontainers-go/postgres/server.key",
+				FileMode:          defaultPermission,
+			},
+			testcontainers.ContainerFile{
+				Reader:            strings.NewReader(embeddedCustomEntrypoint),
+				ContainerFilePath: entrypointPath,
+				FileMode:          defaultPermission,
+			},
+		)
+		req.Entrypoint = []string{"sh", entrypointPath}
+
+		return nil
+	}
+}
+
 // Snapshot takes a snapshot of the current state of the database as a template, which can then be restored using
 // the Restore method. By default, the snapshot will be created under a database called migrated_template, you can
 // customize the snapshot name with the options.
@@ -262,7 +314,7 @@ func (c *PostgresContainer) checkSnapshotConfig(opts []SnapshotOption) (string, 
 	}
 
 	if c.dbName == "postgres" {
-		return "", fmt.Errorf("cannot restore the postgres system database as it cannot be dropped to be restored")
+		return "", errors.New("cannot restore the postgres system database as it cannot be dropped to be restored")
 	}
 	return snapshotName, nil
 }
@@ -270,7 +322,7 @@ func (c *PostgresContainer) checkSnapshotConfig(opts []SnapshotOption) (string, 
 func (c *PostgresContainer) execCommandsSQL(ctx context.Context, cmds ...string) error {
 	conn, cleanup, err := c.snapshotConnection(ctx)
 	if err != nil {
-		testcontainers.Logger.Printf("Could not connect to database to restore snapshot, falling back to `docker exec psql`: %v", err)
+		log.Printf("Could not connect to database to restore snapshot, falling back to `docker exec psql`: %v", err)
 		return c.execCommandsFallback(ctx, cmds)
 	}
 	if cleanup != nil {
@@ -307,7 +359,7 @@ func (c *PostgresContainer) snapshotConnection(ctx context.Context) (*sql.Conn, 
 
 	cleanupPool := func() {
 		if err := pool.Close(); err != nil {
-			testcontainers.Logger.Printf("Could not close database connection pool after restoring snapshot: %v", err)
+			log.Printf("Could not close database connection pool after restoring snapshot: %v", err)
 		}
 	}
 
