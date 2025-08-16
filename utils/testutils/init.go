@@ -3,6 +3,8 @@ package testutils
 import (
 	"context"
 	"log"
+
+	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
 )
 
 var projectRootDir string
@@ -19,6 +21,11 @@ func init() {
 	}
 
 	if err := setupDatabaseContainer(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = redis.SetupTestContainer(context.Background(), config.RedisContainer)
+	if err != nil {
 		log.Fatal(err)
 	}
 }

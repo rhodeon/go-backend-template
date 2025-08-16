@@ -6,6 +6,7 @@ import (
 	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
 	"github.com/rhodeon/go-backend-template/domain"
+	"github.com/rhodeon/go-backend-template/utils/typeutils"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-errors/errors"
@@ -16,12 +17,12 @@ type RegisterRequest struct {
 }
 
 type RegisterRequestBody struct {
-	Email       string `json:"email" required:"true" format:"email" example:"johndoe@example.com" minLength:"3"`
-	Username    string `json:"username" required:"true" example:"johndoe" minLength:"3"`
-	FirstName   string `json:"first_name" required:"true" example:"John" minLength:"1"`
-	LastName    string `json:"last_name" required:"true" example:"Doe" minLength:"1"`
-	PhoneNumber string `json:"phone_number" required:"false" minLength:"1"`
-	Password    string `json:"password" required:"true" example:"123456" minLength:"6"`
+	Email       string  `json:"email" required:"true" format:"email" example:"johndoe@example.com" minLength:"3"`
+	Username    string  `json:"username" required:"true" example:"johndoe" minLength:"3"`
+	FirstName   string  `json:"first_name" required:"true" example:"John" minLength:"1"`
+	LastName    string  `json:"last_name" required:"true" example:"Doe" minLength:"1"`
+	PhoneNumber *string `json:"phone_number" required:"false" minLength:"1"`
+	Password    string  `json:"password" required:"true" example:"123456" minLength:"6"`
 }
 
 type RegisterResponse struct {
@@ -40,16 +41,16 @@ func (h *Handlers) register(ctx context.Context, req *RegisterRequest) (*Registe
 		Username:    req.Body.Username,
 		FirstName:   req.Body.FirstName,
 		LastName:    req.Body.LastName,
-		PhoneNumber: req.Body.PhoneNumber,
+		PhoneNumber: typeutils.Deref(req.Body.PhoneNumber),
 		Password:    req.Body.Password,
 	})
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserDuplicateEmail):
-			return nil, huma.Error409Conflict("email already taken")
+			return nil, huma.Error409Conflict("Email already taken")
 
 		case errors.Is(err, domain.ErrUserDuplicateUsername):
-			return nil, huma.Error409Conflict("username already taken")
+			return nil, huma.Error409Conflict("Username already taken")
 
 		default:
 			return nil, apierrors.UntypedError(ctx, err)

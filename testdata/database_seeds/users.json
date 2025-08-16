@@ -1,9 +1,14 @@
 [
   {
     "id": 1,
-    "username": "janedoe",
     "email": "janedoe@example.com",
-    "created_at": "2024-10-19T18:30:24.144Z",
-    "updated_at": "2024-10-19T18:30:24.144Z"
+    "username": "janedoe",
+    "first_name": "John",
+    "last_name": "Doe",
+    "phone_number": null,
+    "is_verified": true,
+    "hashed_password": "$2a$10$RhMKl/DSKHTFFWwM1HpV0umWV7ivdMvQ8.w2KKSLSx3LPiyWzDJaG",
+    "created_at": "2025-08-14 23:53:00.368054 +00:00",
+    "updated_at": "2025-08-14 23:53:00.368054 +00:00"
   }
 ]
