@@ -1,4 +1,4 @@
-package testutils
+package postgres
 
 import (
 	"context"
@@ -12,45 +12,58 @@ import (
 	"time"
 
 	"github.com/rhodeon/go-backend-template/internal/database"
+	"github.com/rhodeon/go-backend-template/utils/testutils/temp"
 
 	"github.com/go-errors/errors"
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func setupDatabaseContainer(ctx context.Context) error {
+var testConfig *database.Config = &database.Config{}
+
+// SetupTestContainer establishes a Postgres instance in a container to be used for testing.
+func SetupTestContainer(ctx context.Context, image string) (*tcpostgres.PostgresContainer, error) {
 	goose.SetLogger(goose.NopLogger())
 
-	postgresContainer, err := postgres.Run(ctx,
-		config.PostgresContainer,
-		postgres.WithDatabase(config.Database.Name),
-		postgres.WithUsername(config.Database.User),
-		postgres.WithPassword(config.Database.Pass),
+	testConfig = &database.Config{
+		Host:     "localhost",
+		User:     "test_user",
+		Pass:     "test_pass",
+		Name:     "test_db",
+		SslMode:  "disable",
+		MaxConns: 1,
+	}
+
+	postgresContainer, err := tcpostgres.Run(ctx,
+		image,
+		tcpostgres.WithDatabase(testConfig.Name),
+		tcpostgres.WithUsername(testConfig.User),
+		tcpostgres.WithPassword(testConfig.Pass),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
 				WithStartupTimeout(5*time.Second)),
 	)
 	if err != nil {
-		return errors.Errorf("creating Postgres container instance: %w", err)
+		return nil, errors.Errorf("creating Postgres container instance: %w", err)
 	}
 
 	mappedPort, err := postgresContainer.MappedPort(ctx, "5432")
 	if err != nil {
-		return errors.Errorf("getting mapped Postgres container ports: %w", err)
+		return nil, errors.Errorf("getting mapped Postgres container ports: %w", err)
 	}
 
-	config.Database.Port = mappedPort.Port()
+	testConfig.Port = mappedPort.Port()
 
 	if err = postgresContainer.Start(ctx); err != nil {
-		return errors.Errorf("starting Postgres container: %w", err)
+		return nil, errors.Errorf("starting Postgres container: %w", err)
 	}
 
-	return nil
+	return postgresContainer, nil
 }
 
 func ConnectDb(ctx context.Context) (*database.Db, error) {
@@ -60,7 +73,7 @@ func ConnectDb(ctx context.Context) (*database.Db, error) {
 	// A new random database is created for each test to prevent conflicts in operations.
 	dbName := "test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 
-	initialDb, closeInitialDb, err := database.Connect(ctx, config.Database, false)
+	initialDb, closeInitialDb, err := database.Connect(ctx, testConfig, false)
 	if err != nil {
 		return nil, errors.Errorf("connecting to initial database: %w", err)
 	}
@@ -70,12 +83,11 @@ func ConnectDb(ctx context.Context) (*database.Db, error) {
 	}
 	closeInitialDb()
 
-	testDbConfig := *config.Database
-	testDbConfig.Name = dbName
+	testConfig.Name = dbName
 
 	// The database pool of the test will be short-lived and automatically dropped when the test ends,
 	// so there's no need to add extra complexity by trying to close it.
-	db, _, err := database.Connect(ctx, &testDbConfig, false)
+	db, _, err := database.Connect(ctx, testConfig, false)
 	if err != nil {
 		return nil, errors.Errorf("connecting to test database: %w", err)
 	}
@@ -97,7 +109,7 @@ func migrateSchema(connString string) error {
 		return errors.Errorf("opening database: %w", err)
 	}
 
-	migrationsPath := filepath.Join(projectRootDir, "cmd", "migrations", "schema")
+	migrationsPath := filepath.Join(temp.ProjectRootDir, "cmd", "migrations", "schema")
 	if err := goose.Up(db, migrationsPath); err != nil {
 		return errors.Errorf("applying up migrations: %w", err)
 	}
@@ -108,7 +120,7 @@ func migrateSchema(connString string) error {
 // seedData parses the individual seed files in the hub-api repo, each named after a table,
 // and populates their tables.
 func seedData(ctx context.Context, db *database.Db) error {
-	seedsPath := filepath.Join(projectRootDir, "testdata", "database_seeds")
+	seedsPath := filepath.Join(temp.ProjectRootDir, "testdata", "database_seeds")
 	seedFiles, err := os.ReadDir(seedsPath)
 	if err != nil {
 		return errors.Errorf("reading database seeds directory: %w", err)

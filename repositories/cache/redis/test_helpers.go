@@ -13,9 +13,9 @@ import (
 var testConfig *Config
 
 // SetupTestContainer establishes a Redis instance in a container to be used for testing.
-func SetupTestContainer(ctx context.Context, containerName string) (*tcredis.RedisContainer, error) {
+func SetupTestContainer(ctx context.Context, image string) (*tcredis.RedisContainer, error) {
 	redisContainer, err := tcredis.Run(ctx,
-		containerName,
+		image,
 	)
 	if err != nil {
 		return nil, errors.Errorf("creating Redis container instance: %w", err)
@@ -25,15 +25,14 @@ func SetupTestContainer(ctx context.Context, containerName string) (*tcredis.Red
 	if err != nil {
 		return nil, errors.Errorf("getting mapped Redis container ports: %w", err)
 	}
-	port := mappedPort.Int()
-
-	if err = redisContainer.Start(ctx); err != nil {
-		return nil, errors.Errorf("starting Redis container: %w", err)
-	}
 
 	testConfig = &Config{
 		Host: "localhost",
-		Port: port,
+		Port: mappedPort.Int(),
+	}
+
+	if err = redisContainer.Start(ctx); err != nil {
+		return nil, errors.Errorf("starting Redis container: %w", err)
 	}
 
 	return redisContainer, nil

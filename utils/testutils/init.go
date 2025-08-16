@@ -5,27 +5,50 @@ import (
 	"log"
 
 	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
+	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
+	"github.com/testcontainers/testcontainers-go"
 )
 
-var projectRootDir string
+type ContainerOpts struct {
+	Postgres bool
+	Redis    bool
+}
 
-// init sets up the resources needed before running integration tests.
-func init() {
+func SetupContainers(ctx context.Context, opts ContainerOpts) (func(context.Context) error, error) {
 	var err error
-	if projectRootDir, err = getProjectRootDir(); err != nil {
-		log.Fatal(err)
-	}
+	var containers []testcontainers.Container
 
 	if config, err = parseConfig(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := setupDatabaseContainer(context.Background()); err != nil {
-		log.Fatal(err)
+	if opts.Postgres {
+		postgresContainer, err := postgres.SetupTestContainer(ctx, config.PostgresImage)
+		if err != nil {
+			log.Fatal(err)
+		}
+		containers = append(containers, postgresContainer)
 	}
 
-	_, err = redis.SetupTestContainer(context.Background(), config.RedisContainer)
-	if err != nil {
-		log.Fatal(err)
+	if opts.Redis {
+		redisContainer, err := redis.SetupTestContainer(ctx, config.RedisImage)
+		if err != nil {
+			log.Fatal(err)
+		}
+		containers = append(containers, redisContainer)
+	}
+
+	return terminateContainers(containers), nil
+}
+
+func terminateContainers(containers []testcontainers.Container) func(context.Context) error {
+	return func(ctx context.Context) error {
+		for _, container := range containers {
+			if err := container.Terminate(ctx); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 }

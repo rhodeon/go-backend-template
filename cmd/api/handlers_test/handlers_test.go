@@ -5,18 +5,37 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"testing"
 	"time"
 
+	"github.com/go-errors/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/server"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
+	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
 	mockemail "github.com/rhodeon/go-backend-template/repositories/email/mock"
 	"github.com/rhodeon/go-backend-template/services"
 	"github.com/rhodeon/go-backend-template/utils/testutils"
-
-	"github.com/go-errors/errors"
 )
+
+func TestMain(m *testing.M) {
+	containerCleanup, err := testutils.SetupContainers(context.Background(), testutils.ContainerOpts{
+		Postgres: true,
+		Redis:    true,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		if err := containerCleanup(context.Background()); err != nil {
+			panic(err)
+		}
+	}()
+
+	m.Run()
+}
 
 // spawnServer sets up a server and data common to all tests in the package.
 // This allows the testing of routing and endpoint logic without being coupled to the web framework used.
@@ -35,7 +54,7 @@ func spawnServer() (*internal.Application, error) {
 		},
 	}
 
-	dbPool, err := testutils.ConnectDb(context.Background())
+	dbPool, err := postgres.ConnectDb(context.Background())
 	if err != nil {
 		return nil, errors.Errorf("connecting database: %w", err)
 	}
