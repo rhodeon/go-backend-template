@@ -3,6 +3,8 @@ package contextutils
 import (
 	"context"
 	"log/slog"
+
+	"github.com/rhodeon/go-backend-template/internal/log"
 )
 
 func WithLogger(ctx context.Context, logger *slog.Logger) context.Context {
@@ -14,7 +16,7 @@ func GetLogger(ctx context.Context) *slog.Logger {
 	if logger, exists := ctx.Value(contextKeyLogger).(*slog.Logger); exists {
 		return logger
 	} else {
-		return slog.Default()
+		return log.NewLogger(false)
 	}
 }
 

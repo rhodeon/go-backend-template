@@ -16,6 +16,8 @@ import (
 )
 
 func TestRegisterUser_success(t *testing.T) {
+	t.Parallel()
+
 	app, err := spawnServer()
 	if err != nil {
 		t.Fatal(err)
@@ -71,6 +73,8 @@ LIMIT 1`).
 }
 
 func TestRegisterUser_failure(t *testing.T) {
+	t.Parallel()
+
 	app, err := spawnServer()
 	if err != nil {
 		t.Fatal(err)

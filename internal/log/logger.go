@@ -50,3 +50,14 @@ func replaceAttr(_ []string, attr slog.Attr) slog.Attr {
 
 	return attr
 }
+
+// Fatal is a convenience wrapper to log fatal errors and immediately exit the program with an error.
+func Fatal(logger *slog.Logger, message string, attrs ...slog.Attr) {
+	anyAttrs := []any{}
+	for _, attr := range attrs {
+		anyAttrs = append(anyAttrs, attr)
+	}
+
+	logger.Error(message, anyAttrs...)
+	os.Exit(1)
+}

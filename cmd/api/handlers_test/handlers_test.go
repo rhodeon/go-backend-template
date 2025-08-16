@@ -8,24 +8,29 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-errors/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/cmd/api/server"
+	"github.com/rhodeon/go-backend-template/internal/log"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
 	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
 	mockemail "github.com/rhodeon/go-backend-template/repositories/email/mock"
 	"github.com/rhodeon/go-backend-template/services"
+	"github.com/rhodeon/go-backend-template/utils/contextutils"
 	"github.com/rhodeon/go-backend-template/utils/testutils"
+
+	"github.com/go-errors/errors"
 )
 
 func TestMain(m *testing.M) {
-	containerCleanup, err := testutils.SetupContainers(context.Background(), testutils.ContainerOpts{
+	ctx := context.Background()
+	logger := contextutils.GetLogger(ctx)
+	containerCleanup, err := testutils.SetupContainers(ctx, testutils.ContainerOpts{
 		Postgres: true,
 		Redis:    true,
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(logger, "Failed to set up containers", slog.Any(log.AttrError, err))
 	}
 
 	defer func() {
@@ -54,7 +59,7 @@ func spawnServer() (*internal.Application, error) {
 		},
 	}
 
-	dbPool, err := postgres.ConnectDb(context.Background())
+	dbPool, err := postgres.ConnectTestDb(context.Background())
 	if err != nil {
 		return nil, errors.Errorf("connecting database: %w", err)
 	}

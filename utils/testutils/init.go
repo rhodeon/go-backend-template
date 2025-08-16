@@ -2,53 +2,22 @@ package testutils
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
-	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
-	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
-	"github.com/testcontainers/testcontainers-go"
+	"github.com/rhodeon/go-backend-template/internal/log"
+	"github.com/rhodeon/go-backend-template/utils/contextutils"
 )
 
-type ContainerOpts struct {
-	Postgres bool
-	Redis    bool
-}
+var projectRootDir string
 
-func SetupContainers(ctx context.Context, opts ContainerOpts) (func(context.Context) error, error) {
+func init() {
+	logger := contextutils.GetLogger(context.Background())
 	var err error
-	var containers []testcontainers.Container
+	if projectRootDir, err = getProjectRootDir(); err != nil {
+		log.Fatal(logger, "Failed to get project root directory", slog.Any(log.AttrError, err))
+	}
 
 	if config, err = parseConfig(); err != nil {
-		log.Fatal(err)
-	}
-
-	if opts.Postgres {
-		postgresContainer, err := postgres.SetupTestContainer(ctx, config.PostgresImage)
-		if err != nil {
-			log.Fatal(err)
-		}
-		containers = append(containers, postgresContainer)
-	}
-
-	if opts.Redis {
-		redisContainer, err := redis.SetupTestContainer(ctx, config.RedisImage)
-		if err != nil {
-			log.Fatal(err)
-		}
-		containers = append(containers, redisContainer)
-	}
-
-	return terminateContainers(containers), nil
-}
-
-func terminateContainers(containers []testcontainers.Container) func(context.Context) error {
-	return func(ctx context.Context) error {
-		for _, container := range containers {
-			if err := container.Terminate(ctx); err != nil {
-				return err
-			}
-		}
-
-		return nil
+		log.Fatal(logger, "Failed to parse config", slog.Any(log.AttrError, err))
 	}
 }
