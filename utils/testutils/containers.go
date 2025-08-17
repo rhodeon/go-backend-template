@@ -28,7 +28,7 @@ func SetupContainers(ctx context.Context, opts ContainerOpts) error {
 	}
 
 	if opts.Redis {
-		if err := redis.SetupTestContainer(ctx, config.RedisImage); err != nil {
+		if err := redis.SetupTestContainer(ctx, config.RedisImage, projectRootDir); err != nil {
 			return errors.Errorf("setting up redis container: %w", err)
 		}
 	}

@@ -18,9 +18,10 @@ type Cache struct {
 
 func New(ctx context.Context, cfg *Config) (cache.Cache, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:     cfg.Host + ":" + strconv.Itoa(cfg.Port),
-		Password: cfg.Password,
-		DB:       cfg.Database,
+		Addr:      cfg.Host + ":" + strconv.Itoa(cfg.Port),
+		Password:  cfg.Password,
+		DB:        cfg.Database,
+		OnConnect: cfg.OnConnect,
 	})
 
 	if err := client.Ping(ctx).Err(); err != nil {
