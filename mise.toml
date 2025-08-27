@@ -1,5 +1,6 @@
 [tools]
-"golangci-lint" = "v2.3.0"
+"go" = "1.25.0"
+"golangci-lint" = "v2.4.0"
 "aqua:sqlc-dev/sqlc" = "1.29.0"
 "pipx:sqlfluff" = "3.4.2"
 
@@ -48,6 +49,7 @@ run = [
 description = "Format the codebase uniformly and vendor dependencies"
 quiet = true
 run = [
+    "go version",
     "echo 'Tidying dependencies...'",
     "go mod tidy -v",
     "go mod vendor",
