@@ -2,27 +2,33 @@ package redis
 
 import (
 	"context"
+	"log/slog"
 	"math/rand"
 	"path/filepath"
 	"time"
 
+	"github.com/rhodeon/go-backend-template/internal/log"
+	"github.com/rhodeon/go-backend-template/repositories/cache"
+	"github.com/rhodeon/go-backend-template/utils/contextutils"
+
 	"github.com/go-errors/errors"
 	"github.com/redis/go-redis/v9"
-	"github.com/rhodeon/go-backend-template/repositories/cache"
 	"github.com/testcontainers/testcontainers-go"
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
-// containerName is the name of the global Redis container to be shared across all test packages.
-// The UUID suffix is meant to reduce (practically eliminate) the chances of collision with another container.
-const containerName = "gobt-redis-8b44d6d1"
+const (
+	// containerName is the name of the global Redis container to be shared across all test packages.
+	// The UUID suffix is meant to reduce (practically eliminate) the chances of collision with another container.
+	containerName = "gobt-redis-8b44d6d1"
 
-// maxDatabases defines the maximum number of Redis databases.
-// It also limits the number of concurrent tests which depend on Redis and should be increased accordingly.
-// For the best effect, it should be set to at least 10x the number of concurrent tests to reduce the chances of repetition
-// when generating the database number per-test.
-// 1000 was arbitrarily chosen as a reasonable value.
-const maxDatabases = 1000
+	// maxDatabases defines the maximum number of Redis databases.
+	// It also limits the number of concurrent tests which depend on Redis and should be increased accordingly.
+	// For the best effect, it should be set to at least 10x the number of concurrent tests to reduce the chances of repetition
+	// when generating the database number per-test.
+	// 1000 was arbitrarily chosen as a reasonable value.
+	maxDatabases = 1000
+)
 
 var testConfig = &Config{
 	Host: "localhost",
@@ -45,10 +51,8 @@ func SetupTestContainer(ctx context.Context, image string, projectRootDir string
 		return errors.Errorf("getting mapped Redis container ports: %w", err)
 	}
 
-	testConfig = &Config{
-		Host: "localhost",
-		Port: mappedPort.Int(),
-	}
+	testConfig.Port = mappedPort.Int()
+	contextutils.GetLogger(ctx).Info("Redis test container is ready", slog.Int(log.AttrPort, testConfig.Port))
 
 	if err = redisContainer.Start(ctx); err != nil {
 		return errors.Errorf("starting Redis container: %w", err)
@@ -88,8 +92,13 @@ func NewTestCache(ctx context.Context) (cache.Cache, error) {
 			default:
 				return nil, errors.Errorf("connecting redis: %w", err)
 			}
-
 		}
+
+		contextutils.GetLogger(ctx).Info(
+			"Connected to Redis test cache",
+			slog.Int(log.AttrDatabase, dbNumber),
+			slog.Int(log.AttrPort, testConfig.Port),
+		)
 
 		return redisCache, nil
 	}

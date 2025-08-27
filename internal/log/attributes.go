@@ -10,4 +10,5 @@ const (
 	AttrPort       = "port"
 	AttrRecipient  = "recipient"
 	AttrOtp        = "otp"
+	AttrDatabase   = "database"
 )

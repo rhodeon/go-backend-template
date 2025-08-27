@@ -38,6 +38,8 @@ func TestMain(m *testing.M) {
 // spawnServer sets up a server and data common to all tests in the package.
 // This allows the testing of routing and endpoint logic without being coupled to the web framework used.
 func spawnServer() (*internal.Application, error) {
+	ctx := context.Background()
+
 	config := &internal.Config{
 		Environment: "testing",
 		DebugMode:   false,
@@ -52,12 +54,12 @@ func spawnServer() (*internal.Application, error) {
 		},
 	}
 
-	dbPool, err := postgres.ConnectTestDb(context.Background())
+	dbPool, err := postgres.ConnectTestDb(ctx)
 	if err != nil {
 		return nil, errors.Errorf("connecting database: %w", err)
 	}
 
-	redisCache, err := redis.NewTestCache(context.Background())
+	redisCache, err := redis.NewTestCache(ctx)
 	if err != nil {
 		return nil, errors.Errorf("connecting redis: %w", err)
 	}
