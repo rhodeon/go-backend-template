@@ -16,11 +16,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type authTokenType string
+type AuthTokenType string
 
 const (
-	AuthTokenTypeAccess  authTokenType = "access"
-	AuthTokenTypeRefresh authTokenType = "refresh"
+	AuthTokenTypeAccess  AuthTokenType = "access"
+	AuthTokenTypeRefresh AuthTokenType = "refresh"
 )
 
 type Auth struct {
@@ -80,7 +80,7 @@ func (a *Auth) GenerateRefreshToken(userId int64) (string, error) {
 	return signedToken, nil
 }
 
-func (a *Auth) ParseToken(tokenString string, tokenType authTokenType) (*JWTClaims, error) {
+func (a *Auth) ParseToken(tokenString string, tokenType AuthTokenType) (*JWTClaims, error) {
 	var secret string
 	switch tokenType {
 	case AuthTokenTypeAccess:
@@ -90,13 +90,14 @@ func (a *Auth) ParseToken(tokenString string, tokenType authTokenType) (*JWTClai
 		secret = a.cfg.Auth.JwtRefreshTokenSecret
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, JWTClaims{}, func(_ *jwt.Token) (any, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(_ *jwt.Token) (any, error) {
 		return []byte(secret), nil
 	})
 	if err != nil {
 		switch {
 		case strings.Contains(err.Error(), "expired"):
 			return nil, domain.ErrAuthExpiredToken
+
 		default:
 			return nil, domain.ErrAuthInvalidToken
 		}

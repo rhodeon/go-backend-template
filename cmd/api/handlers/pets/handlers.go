@@ -3,23 +3,22 @@ package pets
 import (
 	"net/http"
 
-	"github.com/rhodeon/go-backend-template/cmd/api/handlers/store/orders"
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
+	apimiddleware "github.com/rhodeon/go-backend-template/cmd/api/middleware"
 
 	"github.com/danielgtaylor/huma/v2"
 )
 
 type Handlers struct {
-	app    *internal.Application
-	Orders *orders.Handlers
+	app *internal.Application
 }
 
 func New(app *internal.Application, api huma.API) *Handlers {
 	group := huma.NewGroup(api, "/pets")
+	group.UseMiddleware(apimiddleware.Authentication(app, api))
 
 	handler := &Handlers{
 		app,
-		orders.New(app, group),
 	}
 
 	handler.registerRoutes(group)
@@ -74,7 +73,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Path:        "/{pet_id}",
 			Tags:        []string{"pets"},
 			Summary:     "Delete pet resource",
-			// Description: "This can only be done by the logged in user.",
 		},
 		h.delete,
 	)
@@ -87,7 +85,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Path:        "",
 			Tags:        []string{"pets"},
 			Summary:     "List pets",
-			// Description: "Log into the system.",
 		},
 		h.list,
 	)
@@ -100,7 +97,6 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Path:        "/upload-image",
 			Tags:        []string{"pets"},
 			Summary:     "Upload pet image",
-			// Description: "Log user out of the system.",
 		},
 		h.uploadImage,
 	)

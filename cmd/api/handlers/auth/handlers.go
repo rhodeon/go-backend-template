@@ -30,6 +30,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Tags:        []string{"auth"},
 			Summary:     "Register user",
 			Description: "Registers a new user. Email verification is required before further actions can be performed.",
+			Security:    []map[string][]string{},
 		},
 		h.register,
 	)
@@ -43,6 +44,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Tags:        []string{"auth"},
 			Summary:     "Verify account",
 			Description: "Activates the user as a verified account.",
+			Security:    []map[string][]string{},
 		},
 		h.verifyAccount,
 	)
@@ -56,6 +58,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Tags:        []string{"auth"},
 			Summary:     "Send verification email",
 			Description: "Sends verification email to unverified users.",
+			Security:    []map[string][]string{},
 		},
 		h.sendVerificationEmail,
 	)
@@ -69,6 +72,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 			Tags:        []string{"auth"},
 			Summary:     "Login user",
 			Description: "Log into the system.",
+			Security:    []map[string][]string{},
 		},
 		h.login,
 	)

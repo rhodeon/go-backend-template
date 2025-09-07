@@ -7,12 +7,14 @@ import (
 type Services struct {
 	Auth *Auth
 	User *User
+	Pet  *Pet
 }
 
 func New(repos *repositories.Repositories, cfg *Config) *Services {
 	return &Services{
 		newAuth(repos, cfg),
 		newUser(repos, cfg),
+		newPet(repos, cfg),
 	}
 }
 

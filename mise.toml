@@ -49,7 +49,6 @@ run = [
 description = "Format the codebase uniformly and vendor dependencies"
 quiet = true
 run = [
-    "go version",
     "echo 'Tidying dependencies...'",
     "go mod tidy -v",
     "go mod vendor",

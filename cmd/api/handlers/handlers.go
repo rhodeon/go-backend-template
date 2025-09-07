@@ -41,6 +41,7 @@ func (h *handlers) registerRoutes(api huma.API) {
 			Path:        "/ping",
 			Tags:        []string{"misc"},
 			Description: "Acknowledges that the server is reachable.",
+			Security:    []map[string][]string{},
 		},
 		h.ping,
 	)

@@ -72,17 +72,4 @@ func (h *Handlers) registerRoutes(api huma.API) {
 		},
 		h.createWithList,
 	)
-
-	huma.Register(
-		api,
-		huma.Operation{
-			OperationID: "users-logout",
-			Method:      http.MethodPost,
-			Path:        "/logout",
-			Tags:        []string{"users"},
-			Summary:     "Logs out current logged in user session",
-			Description: "Log user out of the system.",
-		},
-		h.logout,
-	)
 }

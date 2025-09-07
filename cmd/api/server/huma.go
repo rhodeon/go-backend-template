@@ -19,6 +19,18 @@ func newHumaConfig(title string, version string) huma.Config {
 	humaConfig := huma.DefaultConfig(title, version)
 	humaConfig.Components.Schemas = NewCustomRegistry()
 
+	humaConfig.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"user": {
+			Type:         "http",
+			Scheme:       "bearer",
+			BearerFormat: "JWT",
+		},
+	}
+
+	humaConfig.Security = []map[string][]string{
+		{"user": {}},
+	}
+
 	return humaConfig
 }
 

@@ -9,14 +9,13 @@ queries_dir="./repositories/database/postgres/queries"
 migrations_dir="./cmd/migrations/schema"
 sqlc_config_file="sqlc.yaml"
 
-# the sqlc config file is overwritten with the required starting data
+# The sqlc config file is overwritten with the required starting data
 cat > $sqlc_config_file <<-END
 version: "2"
 sql:
 END
 
-# queries_config generates identical configurations for the different query files,
-# with different output packages.
+# queries_config generates identical configurations for the different query files with different output packages.
 queries_config=$(cat <<-END
   - engine: "postgresql"
     schema: ${migrations_dir}
@@ -69,9 +68,12 @@ END
 mkdir -p "$base_out_dir"
 
 for file in "$queries_dir"/*; do
-    # the leading path and extensions are trimmed out, leaving only the base file name
+    # The leading path and extensions are trimmed out, leaving only the base file name.
     file_name=$(basename "$file")
     file_name="${file_name%.*}"
+
+    # Underscores are also removed to conform with the Go package naming convention.
+    file_name=$(echo "$file_name" | tr -d '_')
 
     query_file="$file"
     package_name="$file_name"
@@ -83,7 +85,7 @@ for file in "$queries_dir"/*; do
         sed "s|{out_dir}|$out_dir|")
 
     echo "$cumulated_data" >> "$sqlc_config_file"
-    echo  >> $sqlc_config_file   # adds a newline after each query configuration
+    echo  >> $sqlc_config_file   # Adds a newline after each query configuration.
 done
 
 cat >> $sqlc_config_file <<-END
