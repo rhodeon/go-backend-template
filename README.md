@@ -2,7 +2,7 @@
 ## Stack
 - [Huma web framework](https://huma.rocks/): This has the functionality of generating an OpenAPI documentation based on the code and automatically validates and serialises requests/response, letting the focus be more on the features of the platform (besides the initial setup, at least).
 - [sqlc](https://sqlc.dev/) for database operations. It generates Go structs and methods based on provided plain SQL queries.
-- Postgres (should be self-explanatory).
+- Postgres because that's what I know best.
 
 ## Getting Started
 - Install the [Mise](https://mise.jdx.dev) automation tool to run commands in the `mise.toml` file.
