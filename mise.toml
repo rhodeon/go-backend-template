@@ -8,6 +8,11 @@
 # Load environment variables from .env file
 _.file = ".env"
 
+[task_config]
+includes = [
+    "scripts/mise_tasks"
+]
+
 [tasks.default]
 description = "Display all available tasks"
 # `quiet = true` needs to be added to every task to suppress the command running and show only the echoed messages.
@@ -23,19 +28,9 @@ run = [
 description = "First-time setup after cloning the repository"
 quiet = true
 run = [
-    "#echo 'Configuring git hooks directory...'",
+    "echo 'Configuring git hooks directory...'",
     "git config core.hooksPath .git-hooks"
 ]
-
-[tasks.api]
-description = "Start the API service"
-quiet = true
-run = "cd ./cmd/api && go run ."
-
-[tasks.migrations]
-description = "Run migrations. Use `mise migragtions` to see all commands, and 'mise run migrations -- <args>' to pass arguments"
-quiet = true
-run = "cd ./cmd/migrations && go run . ${@}"
 
 [tasks.test]
 description = "Run all tests in codebase"

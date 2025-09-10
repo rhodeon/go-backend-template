@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_USER: ${MIGRATION_DB_USER}
+      POSTGRES_PASSWORD: ${MIGRATION_DB_PASS}
+      POSTGRES_DB: ${MIGRATION_DB_NAME}
+
+    ports:
+      - "${API_DB_PORT}:5432"
+
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./scripts/docker/postgres/init:/docker-entrypoint-initdb.d
+
+    command: [ "postgres", "-c", "log_statement=all" ]
+
+  redis:
+    image: redis:8.2.0
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.1
+    restart: unless-stopped
+
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+
+    ports:
+      - "18888:18888"
+      - "4317:18889"
+
+volumes:
+  pg_data:

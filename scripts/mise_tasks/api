@@ -1,0 +1,15 @@
+#!/bin/bash
+#MISE description="Start the API service"
+
+cleanup() {
+    echo "Stopping containers..."
+    docker compose down
+}
+
+trap cleanup EXIT
+
+echo "Starting containers..."
+docker compose up -d --remove-orphans
+
+echo "Starting API..."
+cd ./cmd/api && go run .

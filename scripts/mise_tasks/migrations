@@ -1,0 +1,15 @@
+#!/bin/bash
+#MISE description="Run migrations. Use `mise migrations` to see all commands, and 'mise run migrations -- <args>' to pass arguments"
+
+cleanup() {
+    echo "Stopping containers..."
+    docker compose down
+}
+
+trap cleanup EXIT
+
+echo "Starting containers..."
+docker compose up -d --remove-orphans
+
+echo "Starting migrations..."
+cd ./cmd/migrations && go run . ${@}
