@@ -9,8 +9,10 @@ import (
 	"github.com/rhodeon/go-backend-template/internal/log"
 	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
+	"github.com/exaring/otelpgx"
 	"github.com/go-errors/errors"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/multitracer"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,7 +36,13 @@ func Connect(ctx context.Context, cfg *Config, debugMode bool) (*Db, func(), err
 	if err != nil {
 		return nil, nil, errors.Errorf("parsing pgx pool config: %w", err)
 	}
-	pgxPoolCfg.ConnConfig.Tracer = newTracer(debugMode)
+
+	tracers := multitracer.New(
+		newTracer(debugMode),
+		otelpgx.NewTracer(),
+	)
+	pgxPoolCfg.ConnConfig.Tracer = tracers
+
 	pgxPoolCfg.MaxConns = cfg.MaxConns
 	pgxPoolCfg.MaxConnLifetime = cfg.MaxConnLifetime
 	pgxPoolCfg.MaxConnIdleTime = cfg.MaxConnIdleTime
@@ -44,15 +52,24 @@ func Connect(ctx context.Context, cfg *Config, debugMode bool) (*Db, func(), err
 		return nil, nil, errors.Errorf("creating db connection pool: %w", err)
 	}
 
-	// The database is pinged to ensure the connection was established.
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+	// The database is pinged to ensure the connection is established.
+	maxAttempts := 10
+	delay := 2 * time.Second
 
-	if err := connPool.Ping(ctx); err != nil {
-		return nil, nil, errors.Errorf("pinging postgres: %w", err)
+	var errPing error
+	for i := 0; i < maxAttempts; i++ {
+		pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		errPing = connPool.Ping(pingCtx)
+		cancel()
+
+		if errPing == nil {
+			return &Db{connPool}, connPool.Close, nil
+		}
+
+		time.Sleep(delay)
 	}
 
-	return &Db{connPool}, connPool.Close, nil
+	return nil, nil, errors.Errorf("pinging postgres after %d attempts: %w", maxAttempts, errPing)
 }
 
 // TxOptions wraps the pgx-specific transaction options and leaves room for extending with other options.

@@ -35,7 +35,7 @@ var testConfig = &Config{
 }
 
 // SetupTestContainer establishes a global Redis instance in a container to be used for testing.
-// This container is truly "global". In order words, a single container is shared/reused across all test packages in the codebase.
+// This container is truly "global". In other words, a single container is shared/reused across all test packages in the codebase.
 func SetupTestContainer(ctx context.Context, image string, projectRootDir string) error {
 	redisContainer, err := tcredis.Run(ctx,
 		image,

@@ -8,6 +8,7 @@ import (
 	"github.com/rhodeon/go-backend-template/cmd/api/server"
 	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/internal/log"
+	"github.com/rhodeon/go-backend-template/internal/otel"
 	"github.com/rhodeon/go-backend-template/repositories"
 	"github.com/rhodeon/go-backend-template/repositories/cache/redis"
 	mockemail "github.com/rhodeon/go-backend-template/repositories/email/mock"
@@ -20,6 +21,11 @@ func main() {
 	mainCtx := context.Background()
 	cfg := internal.ParseConfig()
 	logger := log.NewLogger(cfg.DebugMode)
+
+	otelConfig := otel.Config(cfg.Otel)
+	if err := otel.NewTracer(&otelConfig); err != nil {
+		panic(err)
+	}
 
 	dbConfig := database.Config(cfg.Database)
 	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)

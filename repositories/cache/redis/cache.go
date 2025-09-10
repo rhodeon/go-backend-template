@@ -8,6 +8,7 @@ import (
 	"github.com/rhodeon/go-backend-template/repositories/cache"
 
 	"github.com/go-errors/errors"
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -23,6 +24,10 @@ func New(ctx context.Context, cfg *Config) (cache.Cache, error) {
 		DB:        cfg.Database,
 		OnConnect: cfg.OnConnect,
 	})
+
+	if err := redisotel.InstrumentTracing(client); err != nil {
+		return nil, errors.Errorf("instrumenting tracing for redis: %w", err)
+	}
 
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, errors.Errorf("pinging redis: %w", err)

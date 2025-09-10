@@ -17,6 +17,7 @@ type Config struct {
 	Server      ServerConfig
 	Auth        AuthConfig
 	Smtp        SmtpConfig
+	Otel        Otel
 }
 
 func ParseConfig() *Config {
@@ -42,7 +43,7 @@ type ServerConfig struct {
 
 type DatabaseConfig struct {
 	Host    string `env:"DB_ADDR" envDefault:"localhost"`
-	Port    string `env:"DB_ADDR" envDefault:"5432"`
+	Port    string `env:"DB_PORT" envDefault:"5432"`
 	User    string `env:"DB_USER,required"`
 	Pass    string `env:"DB_PASS,required"`
 	Name    string `env:"DB_NAME,required"`
@@ -77,4 +78,10 @@ type SmtpConfig struct {
 	Password    string `env:"SMTP_PASSWORD,required"`
 	Sender      string `env:"SMTP_SENDER,required"`
 	OtpDuration time.Duration
+}
+
+type Otel struct {
+	ServiceName  string `env:"OTEL_SERVICE_NAME" envDefault:"go-backend-template"`
+	OtlpGrpcHost string `env:"OTEL_OTLP_GRPC_HOST" envDefault:"localhost"`
+	OtlpGrpcPort int    `env:"OTEL_OTLP_GRPC_PORT" envDefault:"4317"`
 }

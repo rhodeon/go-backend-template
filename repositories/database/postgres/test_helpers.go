@@ -48,7 +48,7 @@ var testConfig = &database.Config{
 // SetupTestContainer establishes a Postgres instance in a container to be used for testing.
 // During this, a template database is also set up. All tests which need a database connection create one by first cloning the template database.
 // This is much faster than running the migrations for each test, especially when there's a lot of data involved.
-// This container is truly "global". In order words, a single container is shared/reused across all test packages in the codebase.
+// This container is truly "global". In other words, a single container is shared/reused across all test packages in the codebase.
 // Having a single shared container helps in cutting down the start-up time of tests and reduces the amount of resources (CPU and memory) used.
 func SetupTestContainer(ctx context.Context, image string, projectRootDir string) error {
 	goose.SetLogger(goose.NopLogger())
