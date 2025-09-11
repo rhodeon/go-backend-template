@@ -181,9 +181,6 @@ github.com/klauspost/compress/internal/le
 github.com/klauspost/compress/internal/snapref
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
-# github.com/lmittmann/tint v1.0.5
-## explicit; go 1.21
-github.com/lmittmann/tint
 # github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0
 ## explicit; go 1.16
 github.com/lufia/plan9stats
@@ -307,6 +304,10 @@ github.com/tklauser/go-sysconf
 # github.com/tklauser/numcpus v0.6.1
 ## explicit; go 1.13
 github.com/tklauser/numcpus
+# github.com/veqryn/slog-context v0.8.0
+## explicit; go 1.21
+github.com/veqryn/slog-context
+github.com/veqryn/slog-context/internal/attr
 # github.com/wneessen/go-mail v0.6.2
 ## explicit; go 1.16
 github.com/wneessen/go-mail
