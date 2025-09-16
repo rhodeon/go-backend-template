@@ -9,7 +9,6 @@ import (
 
 	"github.com/rhodeon/go-backend-template/internal/log"
 	"github.com/rhodeon/go-backend-template/repositories/cache"
-	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/go-errors/errors"
 	"github.com/redis/go-redis/v9"
@@ -52,7 +51,7 @@ func SetupTestContainer(ctx context.Context, image string, projectRootDir string
 	}
 
 	testConfig.Port = mappedPort.Int()
-	contextutils.GetLogger(ctx).Info("Redis test container is ready", slog.Int(log.AttrPort, testConfig.Port))
+	slog.InfoContext(ctx, "Redis test container is ready", slog.Int(log.AttrPort, testConfig.Port))
 
 	if err = redisContainer.Start(ctx); err != nil {
 		return errors.Errorf("starting Redis container: %w", err)
@@ -94,7 +93,8 @@ func NewTestCache(ctx context.Context) (cache.Cache, error) {
 			}
 		}
 
-		contextutils.GetLogger(ctx).Info(
+		slog.InfoContext(
+			ctx,
 			"Connected to Redis test cache",
 			slog.Int(log.AttrDatabase, dbNumber),
 			slog.Int(log.AttrPort, testConfig.Port),

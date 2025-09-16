@@ -138,13 +138,13 @@ linters:
       # Default: ""
       key-naming-case: snake
 
-      no-global: "all"
-
       msg-style: "capitalized"
 
       no-raw-keys: true
 
       static-msg: true
+
+      context: all
 
     wrapcheck:
       extra-ignore-sigs:

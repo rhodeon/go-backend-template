@@ -21,7 +21,6 @@ func router(app *internal.Application) http.Handler {
 	api := humachi.New(mux, humaConfig)
 
 	api.UseMiddleware(
-		apimiddleware.SetLogger(app),
 		apimiddleware.SetRequestId(app),
 		apimiddleware.Tracing(app, api),
 		apimiddleware.Timeout(app),

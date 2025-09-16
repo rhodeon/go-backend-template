@@ -1,35 +1,35 @@
 package log
 
 import (
+	"context"
 	"log/slog"
 	"os"
-	"time"
 
-	"github.com/lmittmann/tint"
+	slogctx "github.com/veqryn/slog-context"
+	slogotel "github.com/veqryn/slog-context/otel"
 )
 
-func NewLogger(debugMode bool) *slog.Logger {
+func Setup(debugMode bool) {
 	logLevel := slog.LevelInfo
 	if debugMode {
 		logLevel = slog.LevelDebug
 	}
 
-	tintOptions := &tint.Options{
+	baseOptions := &slog.HandlerOptions{
 		Level:       logLevel,
-		TimeFormat:  time.RFC3339,
 		ReplaceAttr: replaceAttr,
 	}
-	tintHandler := tint.NewHandler(os.Stderr, tintOptions)
 
-	_ = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		AddSource:   false,
-		Level:       logLevel,
-		ReplaceAttr: replaceAttr,
+	baseHandler := slog.NewTextHandler(os.Stderr, baseOptions)
+	ctxHandler := slogctx.NewHandler(baseHandler, &slogctx.HandlerOptions{
+		Appenders: []slogctx.AttrExtractor{
+			slogotel.ExtractTraceSpanID,
+			slogctx.ExtractAppended,
+		},
 	})
 
-	logger := slog.New(tintHandler)
+	logger := slog.New(ctxHandler)
 	slog.SetDefault(logger)
-	return logger
 }
 
 func replaceAttr(_ []string, attr slog.Attr) slog.Attr {
@@ -52,12 +52,12 @@ func replaceAttr(_ []string, attr slog.Attr) slog.Attr {
 }
 
 // Fatal is a convenience wrapper to log fatal errors and immediately exit the program with an error.
-func Fatal(logger *slog.Logger, message string, attrs ...slog.Attr) {
+func Fatal(ctx context.Context, message string, attrs ...slog.Attr) {
 	anyAttrs := []any{}
 	for _, attr := range attrs {
 		anyAttrs = append(anyAttrs, attr)
 	}
 
-	logger.Error(message, anyAttrs...) //nolint:sloglint
+	slog.ErrorContext(ctx, message, anyAttrs...) //nolint:sloglint
 	os.Exit(1)
 }

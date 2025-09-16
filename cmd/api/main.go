@@ -20,12 +20,16 @@ import (
 func main() {
 	mainCtx := context.Background()
 	cfg := internal.ParseConfig()
-	logger := log.NewLogger(cfg.DebugMode)
 
 	otelConfig := otel.Config(cfg.Otel)
 	if err := otel.NewTracer(&otelConfig); err != nil {
 		panic(err)
 	}
+	if err := otel.SetupLogger(mainCtx, &otelConfig); err != nil {
+		panic(err)
+	}
+
+	log.Setup(cfg.DebugMode)
 
 	dbConfig := database.Config(cfg.Database)
 	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
@@ -39,13 +43,13 @@ func main() {
 		panic(err)
 	}
 	svcs := setupServices(mainCtx, cfg, repos)
-	app := internal.NewApplication(cfg, logger, db, svcs)
+	app := internal.NewApplication(cfg, db, svcs)
 
 	// A waitgroup is established to ensure background tasks are completed before shutting down the server.
 	backgroundWg := &sync.WaitGroup{}
 
 	// The listen chan isn't used here and is buffered to 1 so the server won't be blocked.
-	err = server.ServeApi(app, backgroundWg, make(chan<- int, 1))
+	err = server.ServeApi(mainCtx, app, backgroundWg, make(chan<- int, 1))
 	if err != nil {
 		panic(err)
 	}

@@ -16,7 +16,6 @@ import (
 	"github.com/rhodeon/go-backend-template/repositories/database/postgres"
 	mockemail "github.com/rhodeon/go-backend-template/repositories/email/mock"
 	"github.com/rhodeon/go-backend-template/services"
-	"github.com/rhodeon/go-backend-template/utils/contextutils"
 	"github.com/rhodeon/go-backend-template/utils/testutils"
 
 	"github.com/go-errors/errors"
@@ -24,12 +23,11 @@ import (
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	logger := contextutils.GetLogger(ctx)
 	if err := testutils.SetupContainers(ctx, testutils.ContainerOpts{
 		Postgres: true,
 		Redis:    true,
 	}); err != nil {
-		log.Fatal(logger, "Failed to set up containers", slog.Any(log.AttrError, err))
+		log.Fatal(ctx, "Failed to set up containers", slog.Any(log.AttrError, err))
 	}
 
 	m.Run()
@@ -66,11 +64,11 @@ func spawnServer() (*internal.Application, error) {
 
 	repos := repositories.New(redisCache, mockemail.New())
 	svcs := services.New(repos, &services.Config{})
-	app := internal.NewApplication(config, slog.Default(), dbPool, svcs)
+	app := internal.NewApplication(config, dbPool, svcs)
 	listenChan := make(chan int, 1)
 
 	go func() {
-		if err := server.ServeApi(app, &sync.WaitGroup{}, listenChan); err != nil {
+		if err := server.ServeApi(ctx, app, &sync.WaitGroup{}, listenChan); err != nil {
 			panic(err)
 		}
 	}()

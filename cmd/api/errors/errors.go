@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/rhodeon/go-backend-template/internal/log"
-	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-errors/errors"
@@ -67,22 +66,21 @@ func UntypedError(ctx context.Context, err error) error {
 	// The error is transparently wrapped here, in case it doesn't have a stack trace already.
 	// This won't necessarily point to the exact origin of the error, but it'll specify at what point it was returned by a handler.
 	err = errors.Wrap(err, 1)
-	logger := contextutils.GetLogger(ctx)
 
 	switch {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
 		// If the request times out, a warning is logged. A high volume of such warnings should be worth investigating.
-		logger.Warn("Server timed out")
+		slog.WarnContext(ctx, "Server timed out")
 		return huma.Error504GatewayTimeout("server timeout")
 
 	case errors.Is(err, context.Canceled):
 		// If the session is cancelled (either explicitly by the user or something else),
 		// a warning is logged. A high volume of such warnings should be worth investigating.
-		logger.Warn("Session cancelled")
+		slog.WarnContext(ctx, "Session cancelled")
 		return huma.Error500InternalServerError("", err)
 
 	default:
-		logger.Error("Internal server error", slog.Any(log.AttrError, err))
+		slog.ErrorContext(ctx, "Internal server error", slog.Any(log.AttrError, err))
 		return huma.Error500InternalServerError("", err)
 	}
 }

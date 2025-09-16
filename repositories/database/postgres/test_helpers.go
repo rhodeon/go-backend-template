@@ -14,7 +14,6 @@ import (
 
 	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/internal/log"
-	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/go-errors/errors"
 	"github.com/google/uuid"
@@ -74,7 +73,7 @@ func SetupTestContainer(ctx context.Context, image string, projectRootDir string
 	}
 
 	testConfig.Port = mappedPort.Port()
-	contextutils.GetLogger(ctx).Info("Postgres test container is ready", slog.String(log.AttrPort, testConfig.Port))
+	slog.InfoContext(ctx, "Postgres test container is ready", slog.String(log.AttrPort, testConfig.Port))
 
 	if err = postgresContainer.Start(ctx); err != nil {
 		return errors.Errorf("starting Postgres container: %w", err)
@@ -161,7 +160,8 @@ func ConnectTestDb(ctx context.Context) (*database.Db, error) {
 		return nil, errors.Errorf("connecting to test database: %w", err)
 	}
 
-	contextutils.GetLogger(ctx).Info(
+	slog.InfoContext(
+		ctx,
 		"Connected to Postgres test database",
 		slog.String(log.AttrDatabase, dbName),
 		slog.String(log.AttrPort, testConfig.Port),

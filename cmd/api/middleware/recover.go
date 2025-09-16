@@ -2,10 +2,9 @@ package middleware
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"runtime/debug"
-
-	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -17,7 +16,7 @@ func Recover(api huma.API) func(huma.Context, func(huma.Context)) {
 			if r := recover(); r != nil {
 				// sloglint is disabled here because of the `static-msg` rule.
 				// The stacktrace is dynamic and isn't set as a log attribute as newlines are not rendered.
-				contextutils.GetLogger(ctx.Context()).Error(fmt.Sprintf( //nolint: sloglint
+				slog.ErrorContext(ctx.Context(), fmt.Sprintf( //nolint: sloglint
 					"Internal server error caused by panic: %v\n%v\n",
 					r, string(debug.Stack()),
 				))

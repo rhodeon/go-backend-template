@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/rhodeon/go-backend-template/internal/log"
-	"github.com/rhodeon/go-backend-template/utils/contextutils"
 
 	"github.com/exaring/otelpgx"
 	"github.com/go-errors/errors"
@@ -115,7 +114,7 @@ func (p *Db) rollbackTransaction(tx *Tx) rollbackResolver {
 	return func(ctx context.Context) {
 		// If the transaction is already closed, the error can be ignored.
 		if err := tx.innerTx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			contextutils.GetLogger(ctx).Error("Rolling back database transaction", slog.Any(log.AttrError, err))
+			slog.ErrorContext(ctx, "Rolling back database transaction", slog.Any(log.AttrError, err))
 		}
 	}
 }
