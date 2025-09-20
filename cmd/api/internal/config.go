@@ -81,7 +81,8 @@ type SmtpConfig struct {
 }
 
 type Otel struct {
-	ServiceName  string `env:"OTEL_SERVICE_NAME" envDefault:"go-backend-template"`
-	OtlpGrpcHost string `env:"OTEL_OTLP_GRPC_HOST" envDefault:"localhost"`
-	OtlpGrpcPort int    `env:"OTEL_OTLP_GRPC_PORT" envDefault:"4317"`
+	ServiceName          string `env:"OTEL_SERVICE_NAME" envDefault:"go-backend-template"`
+	OtlpGrpcHost         string `env:"OTEL_OTLP_GRPC_HOST" envDefault:"localhost"`
+	OtlpGrpcPort         int    `env:"OTEL_OTLP_GRPC_PORT" envDefault:"4317"`
+	OtlpSecureConnection bool   `env:"OTEL_OTLP_SECURE_CONNECTION" envDefault:"false"`
 }

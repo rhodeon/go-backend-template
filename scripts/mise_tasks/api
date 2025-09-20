@@ -12,4 +12,7 @@ echo "Starting containers..."
 docker compose up -d --remove-orphans
 
 echo "Starting API..."
-cd ./cmd/api && go run .
+echo "View API logs at http://localhost:18888"
+
+# The API is redirected to a file to allow easier capture by the OTel filelog receiver.
+cd ./cmd/api && go run . >api.log  2>&1

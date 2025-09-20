@@ -12,7 +12,7 @@ services:
       POSTGRES_DB: ${MIGRATION_DB_NAME}
 
     ports:
-      - "${API_DB_PORT}:5432"
+      - "${API_DB_PORT:-5432}:5432"
 
     volumes:
       - pg_data:/var/lib/postgresql/data
@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - "6379:6379"
+      - "${API_CACHE_PORT:-6379}:6379"
 
   aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:9.1
@@ -36,7 +36,22 @@ services:
 
     ports:
       - "18888:18888"
-      - "4317:18889"
+      - "${API_OTEL_OTLP_GRPC_PORT:-4317}:18889"
+
+    expose:
+      - "18889"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.135.0
+
+    env_file: ".env"
+
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+      - ./cmd/api/api.log:/var/log/myapp/api.log:ro
+
+    depends_on:
+      - aspire-dashboard
 
 volumes:
   pg_data:

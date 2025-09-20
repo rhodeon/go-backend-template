@@ -1,0 +1,50 @@
+processors:
+  resource:
+    attributes:
+      - key: service.name
+        value: ${env:API_OTEL_SERVICE_NAME}
+        action: upsert
+
+receivers:
+  filelog:
+    include: [ /var/log/myapp/api.log ]
+    start_at: beginning
+
+    operators:
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout_type: gotime
+          layout: "2006-01-02T15:04:05.000000000-07:00"
+
+        severity:
+          parse_from: attributes.level
+
+      - type: trace_parser
+        trace_id:
+          parse_from: attributes.trace_id
+
+        span_id:
+          parse_from: attributes.span_id
+
+      - type: move
+        from: attributes.msg
+        to: body
+
+      # Error messages are appended to the log body for more convenient viewing in the UI.
+      - type: add
+        field: body
+        value: "EXPR(body + ': ' + attributes.error.msg)"
+
+exporters:
+  otlp:
+    endpoint: "aspire-dashboard:18889"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    logs:
+      processors: [ resource ]
+      receivers: [ filelog ]
+      exporters: [ otlp ]

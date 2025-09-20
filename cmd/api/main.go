@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
@@ -21,26 +22,23 @@ func main() {
 	mainCtx := context.Background()
 	cfg := internal.ParseConfig()
 
-	otelConfig := otel.Config(cfg.Otel)
-	if err := otel.NewTracer(&otelConfig); err != nil {
-		panic(err)
-	}
-	if err := otel.SetupLogger(mainCtx, &otelConfig); err != nil {
-		panic(err)
-	}
-
 	log.Setup(cfg.DebugMode)
+
+	otelConfig := otel.Config(cfg.Otel)
+	if err := otel.SetupTracer(mainCtx, &otelConfig); err != nil {
+		log.Fatal(mainCtx, "[INIT] Failed to set up tracer", slog.Any(log.AttrError, err))
+	}
 
 	dbConfig := database.Config(cfg.Database)
 	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
 	if err != nil {
-		panic(err)
+		log.Fatal(mainCtx, "[INIT] Failed to connect to database", slog.Any(log.AttrError, err))
 	}
 	defer closeDb()
 
 	repos, err := setupRepositories(mainCtx, cfg)
 	if err != nil {
-		panic(err)
+		log.Fatal(mainCtx, "[INIT] Failed to set up repositories", slog.Any(log.AttrError, err))
 	}
 	svcs := setupServices(mainCtx, cfg, repos)
 	app := internal.NewApplication(cfg, db, svcs)
@@ -49,9 +47,8 @@ func main() {
 	backgroundWg := &sync.WaitGroup{}
 
 	// The listen chan isn't used here and is buffered to 1 so the server won't be blocked.
-	err = server.ServeApi(mainCtx, app, backgroundWg, make(chan<- int, 1))
-	if err != nil {
-		panic(err)
+	if err = server.ServeApi(mainCtx, app, backgroundWg, make(chan<- int, 1)); err != nil {
+		log.Fatal(mainCtx, "Error serving API", slog.Any(log.AttrError, err))
 	}
 }
 

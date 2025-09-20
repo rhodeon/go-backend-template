@@ -12,14 +12,16 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
-func NewTracer(cfg *Config) error {
-	otlpTraceExporter, err := otlptrace.New(
-		context.Background(),
-		otlptracegrpc.NewClient(
-			otlptracegrpc.WithEndpoint(cfg.OtlpGrpcEndpoint()),
-			otlptracegrpc.WithInsecure(),
-		),
-	)
+func SetupTracer(ctx context.Context, cfg *Config) error {
+	opts := []otlptracegrpc.Option{
+		otlptracegrpc.WithEndpoint(cfg.OtlpGrpcEndpoint()),
+	}
+
+	if !cfg.OtlpSecureConnection {
+		opts = append(opts, otlptracegrpc.WithInsecure())
+	}
+
+	otlpTraceExporter, err := otlptrace.New(ctx, otlptracegrpc.NewClient(opts...))
 	if err != nil {
 		return errors.Errorf("setting up OTLP trace exporter: %w", err)
 	}

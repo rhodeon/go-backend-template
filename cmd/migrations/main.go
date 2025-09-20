@@ -4,10 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/rhodeon/go-backend-template/cmd/migrations/internal"
 	"github.com/rhodeon/go-backend-template/internal/database"
+	"github.com/rhodeon/go-backend-template/internal/log"
 
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -61,13 +63,13 @@ func main() {
 	dbConfig := database.Config(cfg.Database)
 	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
 	if err != nil {
-		panic(err)
+		log.Fatal(mainCtx, "[INIT] Failed to connect to database", slog.Any(log.AttrError, err))
 	}
 	defer closeDb()
 
 	stdDb := stdlib.OpenDBFromPool(db.Pool())
 	if err := goose.RunWithOptionsContext(mainCtx, command, stdDb, "./schema", gooseArgs, goose.WithAllowMissing()); err != nil {
-		panic(err)
+		log.Fatal(mainCtx, "Error running migrations", slog.Any(log.AttrError, err))
 	}
 }
 

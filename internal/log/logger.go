@@ -9,7 +9,11 @@ import (
 	slogotel "github.com/veqryn/slog-context/otel"
 )
 
+// Setup builds a new logger which automatically attaches OTel trace and span ids to logs.
 func Setup(debugMode bool) {
+	slogotel.DefaultKeyTraceID = "trace_id"
+	slogotel.DefaultKeySpanID = "span_id"
+
 	logLevel := slog.LevelInfo
 	if debugMode {
 		logLevel = slog.LevelDebug
@@ -19,8 +23,8 @@ func Setup(debugMode bool) {
 		Level:       logLevel,
 		ReplaceAttr: replaceAttr,
 	}
+	baseHandler := slog.NewJSONHandler(os.Stdout, baseOptions)
 
-	baseHandler := slog.NewTextHandler(os.Stderr, baseOptions)
 	ctxHandler := slogctx.NewHandler(baseHandler, &slogctx.HandlerOptions{
 		Appenders: []slogctx.AttrExtractor{
 			slogotel.ExtractTraceSpanID,
