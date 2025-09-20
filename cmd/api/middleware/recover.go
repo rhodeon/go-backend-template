@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/rhodeon/go-backend-template/cmd/api/internal"
+
 	"github.com/danielgtaylor/huma/v2"
 )
 
 // Recover logs any existing panics then writes an internal server error to the response.
-func Recover(api huma.API) func(huma.Context, func(huma.Context)) {
+func Recover(_ *internal.Application, api huma.API) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		defer func() {
 			if r := recover(); r != nil {

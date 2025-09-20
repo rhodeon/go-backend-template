@@ -11,4 +11,9 @@ const (
 	AttrRecipient  = "recipient"
 	AttrOtp        = "otp"
 	AttrDatabase   = "database"
+	AttrMethod     = "method"
+	AttrPath       = "path"
+	AttrIP         = "ip"
+	AttrStatus     = "status"
+	AttrDuration   = "duration"
 )

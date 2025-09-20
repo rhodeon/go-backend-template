@@ -8,23 +8,21 @@ import (
 	apimiddleware "github.com/rhodeon/go-backend-template/cmd/api/middleware"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humachi"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
 )
 
 func router(app *internal.Application) http.Handler {
-	mux := chi.NewMux()
-	mux.Use(middleware.Logger)
+	mux := http.NewServeMux()
 
 	humaConfig := newHumaConfig("API", "0.1.0")
-	api := humachi.New(mux, humaConfig)
+	api := humago.New(mux, humaConfig)
 
 	api.UseMiddleware(
-		apimiddleware.SetRequestId(app),
-		apimiddleware.Tracing(app, api),
-		apimiddleware.Timeout(app),
-		apimiddleware.Recover(api),
+		apimiddleware.RequestId(app, api),
+		apimiddleware.Tracer(app, api),
+		apimiddleware.Logger(app, api),
+		apimiddleware.Recover(app, api),
+		apimiddleware.Timeout(app, api),
 	)
 
 	api.OpenAPI().Tags = []*huma.Tag{

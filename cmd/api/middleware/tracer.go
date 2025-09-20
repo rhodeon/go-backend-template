@@ -9,8 +9,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Tracing wraps handlers in an OpenTelemetry span with relevant details to trace the request.
-func Tracing(app *internal.Application, _ huma.API) func(huma.Context, func(huma.Context)) {
+// Tracer wraps handlers in an OpenTelemetry span with relevant details to trace the request.
+func Tracer(app *internal.Application, _ huma.API) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		tracer := otel.GetTracerProvider().Tracer(app.Config.Otel.ServiceName)
 		spanName := ctx.Operation().OperationID
