@@ -21,35 +21,44 @@ import (
 func main() {
 	mainCtx := context.Background()
 	cfg := internal.ParseConfig()
+	if err := run(mainCtx, cfg); err != nil {
+		log.Fatal(mainCtx, "Error running API", slog.Any(log.AttrError, err))
+	}
+}
 
+// run is separated from the main function to ensure cleanups are honoured when an error occurs.
+// Calling log.Fatal directly in run would trigger os.Exit which skips deferred functions.
+func run(ctx context.Context, cfg *internal.Config) error {
 	log.Setup(cfg.DebugMode)
 
 	otelConfig := otel.Config(cfg.Otel)
-	if err := otel.SetupTracer(mainCtx, &otelConfig); err != nil {
-		log.Fatal(mainCtx, "[INIT] Failed to set up tracer", slog.Any(log.AttrError, err))
+	if err := otel.SetupTracer(ctx, &otelConfig); err != nil {
+		return errors.Errorf("setting up tracer: %w", err)
 	}
 
 	dbConfig := database.Config(cfg.Database)
-	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
+	db, closeDb, err := database.Connect(ctx, &dbConfig, cfg.DebugMode)
 	if err != nil {
-		log.Fatal(mainCtx, "[INIT] Failed to connect to database", slog.Any(log.AttrError, err))
+		return errors.Errorf("connecting to database: %w", err)
 	}
 	defer closeDb()
 
-	repos, err := setupRepositories(mainCtx, cfg)
+	repos, err := setupRepositories(ctx, cfg)
 	if err != nil {
-		log.Fatal(mainCtx, "[INIT] Failed to set up repositories", slog.Any(log.AttrError, err))
+		return errors.Errorf("setting up repositories: %w", err)
 	}
-	svcs := setupServices(mainCtx, cfg, repos)
+	svcs := setupServices(ctx, cfg, repos)
 	app := internal.NewApplication(cfg, db, svcs)
 
 	// A waitgroup is established to ensure background tasks are completed before shutting down the server.
 	backgroundWg := &sync.WaitGroup{}
 
 	// The listen chan isn't used here and is buffered to 1 so the server won't be blocked.
-	if err = server.ServeApi(mainCtx, app, backgroundWg, make(chan<- int, 1)); err != nil {
-		log.Fatal(mainCtx, "Error serving API", slog.Any(log.AttrError, err))
+	if err = server.ServeApi(ctx, app, backgroundWg, make(chan<- int, 1)); err != nil {
+		return errors.Errorf("serving API: %w", err)
 	}
+
+	return nil
 }
 
 func setupRepositories(ctx context.Context, cfg *internal.Config) (*repositories.Repositories, error) {

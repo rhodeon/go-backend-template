@@ -11,6 +11,7 @@ import (
 	"github.com/rhodeon/go-backend-template/internal/database"
 	"github.com/rhodeon/go-backend-template/internal/log"
 
+	"github.com/go-errors/errors"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
@@ -59,18 +60,25 @@ func main() {
 
 	mainCtx := context.Background()
 	cfg := internal.ParseConfig()
+	if err := run(mainCtx, cfg, command, gooseArgs); err != nil {
+		log.Fatal(mainCtx, "Error running migrations", slog.Any(log.AttrError, err))
+	}
+}
 
+func run(ctx context.Context, cfg *internal.Config, command string, args []string) error {
 	dbConfig := database.Config(cfg.Database)
-	db, closeDb, err := database.Connect(mainCtx, &dbConfig, cfg.DebugMode)
+	db, closeDb, err := database.Connect(ctx, &dbConfig, cfg.DebugMode)
 	if err != nil {
-		log.Fatal(mainCtx, "[INIT] Failed to connect to database", slog.Any(log.AttrError, err))
+		return errors.Errorf("connecting to database: %w", err)
 	}
 	defer closeDb()
 
 	stdDb := stdlib.OpenDBFromPool(db.Pool())
-	if err := goose.RunWithOptionsContext(mainCtx, command, stdDb, "./schema", gooseArgs, goose.WithAllowMissing()); err != nil {
-		log.Fatal(mainCtx, "Error running migrations", slog.Any(log.AttrError, err))
+	if err := goose.RunWithOptionsContext(ctx, command, stdDb, "./schema", args, goose.WithAllowMissing()); err != nil {
+		return errors.Errorf("running migrations: %w", err)
 	}
+
+	return nil
 }
 
 func usage() {
