@@ -43,7 +43,7 @@ github.com/cpuguy83/dockercfg
 # github.com/danielgtaylor/huma/v2 v2.34.1
 ## explicit; go 1.23.0
 github.com/danielgtaylor/huma/v2
-github.com/danielgtaylor/huma/v2/adapters/humachi
+github.com/danielgtaylor/huma/v2/adapters/humago
 github.com/danielgtaylor/huma/v2/casing
 github.com/danielgtaylor/huma/v2/negotiation
 github.com/danielgtaylor/huma/v2/queryparam
@@ -106,10 +106,6 @@ github.com/exaring/otelpgx
 # github.com/felixge/httpsnoop v1.0.4
 ## explicit; go 1.13
 github.com/felixge/httpsnoop
-# github.com/go-chi/chi/v5 v5.2.2
-## explicit; go 1.20
-github.com/go-chi/chi/v5
-github.com/go-chi/chi/v5/middleware
 # github.com/go-errors/errors v1.5.1
 ## explicit; go 1.14
 github.com/go-errors/errors

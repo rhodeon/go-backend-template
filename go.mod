@@ -6,7 +6,6 @@ require (
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/danielgtaylor/huma/v2 v2.34.1
 	github.com/exaring/otelpgx v0.9.3
-	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-errors/errors v1.5.1
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/golang-jwt/jwt/v5 v5.3.0
