@@ -21,6 +21,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.38.0
 	github.com/veqryn/slog-context v0.8.0
+	github.com/veqryn/slog-context/otel v0.8.0
 	github.com/wneessen/go-mail v0.6.2
 	go.opentelemetry.io/otel v1.38.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.38.0
