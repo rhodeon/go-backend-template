@@ -17,7 +17,7 @@ import (
 
 // Db abstracts the underlying database pool and provides helper methods for conveniently creating and managing transactions.
 // Another reason for the abstraction is to encourage the consistent use of transactions for all database operations.
-// Having this pattern makes it easier to extend flows (like some which where originally read-only).
+// Following this pattern makes it easier to extend flows (like those which where originally read-only).
 // Postgres always creates an implicit transaction in any case, so making it explicit only has a negligible cost of an extra round-trip.
 // While the Db.Pool method exposes the underlying pool, that should be reserved only for testing and a few exceptional cases.
 type Db struct {
@@ -78,7 +78,7 @@ type TxOptions struct {
 }
 
 // BeginTx starts and returns a new transaction from the given pool along with its associated commit and rollback resolver functions.
-// Both resolvers are returned as guardrails to reduce the chance of forgetting to commit/rollback after the transaction is done.
+// Both resolvers are returned as guardrails to reduce the chances of forgetting to commit/rollback after the transaction is done.
 // The rollback is safe to call after commits and should always be deferred after calling BeginTx as a fail-safe.
 func (p *Db) BeginTx(ctx context.Context, opts ...TxOptions) (*Tx, commitResolver, rollbackResolver, error) {
 	var txOptions pgx.TxOptions
