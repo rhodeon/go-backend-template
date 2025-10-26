@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-errors/errors"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -16,18 +15,17 @@ func SetupTracer(ctx context.Context, cfg *Config) error {
 	opts := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(cfg.OtlpGrpcEndpoint()),
 	}
-
 	if !cfg.OtlpSecureConnection {
 		opts = append(opts, otlptracegrpc.WithInsecure())
 	}
 
-	otlpTraceExporter, err := otlptrace.New(ctx, otlptracegrpc.NewClient(opts...))
+	exporter, err := otlptracegrpc.New(ctx, opts...)
 	if err != nil {
 		return errors.Errorf("setting up OTLP trace exporter: %w", err)
 	}
 
-	traceProvider := trace.NewTracerProvider(
-		trace.WithBatcher(otlpTraceExporter),
+	provider := trace.NewTracerProvider(
+		trace.WithBatcher(exporter),
 		trace.WithResource(
 			resource.NewWithAttributes(
 				semconv.SchemaURL,
@@ -36,6 +34,6 @@ func SetupTracer(ctx context.Context, cfg *Config) error {
 		),
 	)
 
-	otel.SetTracerProvider(traceProvider)
+	otel.SetTracerProvider(provider)
 	return nil
 }
