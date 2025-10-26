@@ -1,14 +1,11 @@
+# A .sqlfluff file is used instead of .sqruff because it's supported by both sqruff and sqlfluff, and it's also better integrated with IDEs.
 [sqlfluff]
 dialect = postgres
-templater = placeholder
-max_line_length = 120
-# Sqlc automatically generates column names based on wildcards so rule AM04 can be ignored.
-exclude_rules = AM04
-
-# TEMPLATE
-[sqlfluff:templater:placeholder]
-# This adds support for the sqlc-based @ parameter.
-param_regex = @(?P<param_name>[\w_]+)
+max_line_length = 180
+rules = all
+# AM04 is excluded because sqlc automatically generates column names based on wildcards.
+# CV11 is excluded because sqruff raises a lot of false positives when using sqlc functions.
+exclude_rules = AM04, CV11
 
 # AMBIGUITY
 [sqlfluff:rules:ambiguous.column_references]
@@ -76,3 +73,11 @@ indented_ctes = true
 spacing_before = align
 align_within = statement
 align_scope = file
+
+# REFERENCES
+[sqlfluff:rules:references.keywords]
+unquoted_identifiers_policy = table_aliases
+
+# STRUCTURE
+[sqlfluff:rules:structure.join_condition_order]
+preferred_first_table_in_join_clause = later

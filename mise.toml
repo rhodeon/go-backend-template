@@ -12,7 +12,7 @@ SQLC_DB_NAME = "sqlc_db"
 "go" = "1.25.0"
 "golangci-lint" = "v2.4.0"
 "aqua:sqlc-dev/sqlc" = "1.29.0"
-"pipx:sqlfluff" = "3.4.2"
+"aqua:quarylabs/sqruff" = "v0.29.3"
 
 [task_config]
 includes = [
@@ -56,9 +56,9 @@ run = [
     "echo 'Formatting Go codebase...'",
     "golangci-lint fmt",
     "echo 'Formatting SQL migration files...'",
-    "sqlfluff fix ./cmd/migrations/schema",
+    "sqruff fix ./cmd/migrations/schema",
     "echo 'Formatting sqlc queries...'",
-    "sqlfluff fix ./repositories/database/postgres/queries"
+    "sqruff fix ./repositories/database/postgres/queries"
 ]
 
 [tasks.vet]
@@ -71,7 +71,7 @@ run = [
     "go mod verify",
     "golangci-lint run ./...",
     "echo 'Linting SQL migration queries...'",
-    "sqlfluff lint ./cmd/migrations/schema",
+    "sqruff lint ./cmd/migrations/schema",
     "echo 'Vetting sqlc queries...'",
     "./sqlc.sh",
     "sqlc diff",
