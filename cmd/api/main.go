@@ -32,8 +32,8 @@ func run(ctx context.Context, cfg *internal.Config) error {
 	log.Setup(cfg.DebugMode)
 
 	otelConfig := otel.Config(cfg.Otel)
-	if err := otel.SetupTracer(ctx, &otelConfig); err != nil {
-		return errors.Errorf("setting up tracer: %w", err)
+	if err := otel.SetupProviders(ctx, &otelConfig); err != nil {
+		return errors.Errorf("Setting up OTel providers: %w", err)
 	}
 
 	dbConfig := database.Config(cfg.Database)

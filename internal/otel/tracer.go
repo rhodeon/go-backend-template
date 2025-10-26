@@ -11,7 +11,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
-func SetupTracer(ctx context.Context, cfg *Config) error {
+// setupTracer initialises a global tracer provider to be used by both first and third-party packages.
+func setupTracer(ctx context.Context, cfg *Config) error {
 	opts := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(cfg.OtlpGrpcEndpoint()),
 	}
