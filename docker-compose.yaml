@@ -53,5 +53,19 @@ services:
     depends_on:
       - aspire-dashboard
 
+  postgres-sqlc:
+    image: postgres:16
+    container_name: postgres-sqlc
+
+    environment:
+      POSTGRES_USER: ${SQLC_DB_USER}
+      POSTGRES_PASSWORD: ${SQLC_DB_PASS}
+      POSTGRES_DB: ${SQLC_DB_NAME}
+
+    ports:
+      - "${SQLC_DB_PORT}:5432"
+
+    command: [ "postgres", "-c", "log_statement=all" ]
+
 volumes:
   pg_data:

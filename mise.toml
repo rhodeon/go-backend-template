@@ -1,12 +1,18 @@
+[env]
+# Load environment variables from .env file
+_.file = ".env"
+
+SQLC_DB_HOST = "localhost"
+SQLC_DB_PORT = "10984" # 10984 is a randomly chosen number that should "hopefully" not conflict with any port in use.
+SQLC_DB_USER = "sqlc_user"
+SQLC_DB_PASS = "sqlc_password"
+SQLC_DB_NAME = "sqlc_db"
+
 [tools]
 "go" = "1.25.0"
 "golangci-lint" = "v2.4.0"
 "aqua:sqlc-dev/sqlc" = "1.29.0"
 "pipx:sqlfluff" = "3.4.2"
-
-[env]
-# Load environment variables from .env file
-_.file = ".env"
 
 [task_config]
 includes = [
@@ -57,6 +63,8 @@ run = [
 
 [tasks.vet]
 description = "Lint and vet Go codebase and SQL queries"
+depends = ["sqlc_setup"]
+depends_post = ["sqlc_teardown"]
 quiet = true
 run = [
     "echo 'Vetting Go code...'",
@@ -64,8 +72,6 @@ run = [
     "golangci-lint run ./...",
     "echo 'Linting SQL migration queries...'",
     "sqlfluff lint ./cmd/migrations/schema",
-    "echo 'Linting sqlc queries...'",
-    "sqlfluff lint ./repositories/database/postgres/queries",
     "echo 'Vetting sqlc queries...'",
     "./sqlc.sh",
     "sqlc diff",
@@ -74,14 +80,50 @@ run = [
 
 [tasks.sqlc]
 description = "Regenerate sqlc queries"
+depends = ["sqlc_setup"]
+depends_post = ["sqlc_teardown"]
 quiet = true
 run = [
-    "echo 'Linting sqlc queries...'",
-    "sqlfluff fix ./repositories/database/postgres/queries",
-    "echo 'Regenerating sqlc.yaml...'",
-    "./sqlc.sh",
     "echo 'Vetting sqlc queries...'",
     "sqlc vet",
-    "echo 'Regenerating queries...'",
+    #
+    "echo 'Regenerating sqlc queries...'",
     "sqlc generate"
+]
+
+
+[tasks.sqlc_setup.env]
+MIGRATION_DB_HOST = "{{env.SQLC_DB_HOST}}"
+MIGRATION_DB_PORT = "{{env.SQLC_DB_PORT}}"
+MIGRATION_DB_USER = "{{env.SQLC_DB_USER}}"
+MIGRATION_DB_PASS = "{{env.SQLC_DB_PASS}}"
+MIGRATION_DB_NAME = "{{env.SQLC_DB_NAME}}"
+
+[tasks.sqlc_setup]
+description = "Set up the Postgres container to be used for sqlc operations"
+quiet = true
+hide = true
+run = [
+    "echo 'Formatting SQL queries...'",
+    "sqruff fix ./repositories/database/postgres/queries",
+    #
+    "echo 'Setting up sqlc Postgres container...'",
+    # The Docker container is always dropped at the start in case it wasn't properly dropped after the last sqlc run.
+    "docker compose --file docker-compose.yaml down --volumes postgres-sqlc",
+    "docker compose --file docker-compose.yaml up --wait postgres-sqlc",
+    #
+    "echo 'Running migrations...'",
+    "cd ./cmd/migrations && go run . up",
+    #
+    "echo 'Regenerating sqlc.yaml...'",
+    "./sqlc.sh"
+]
+
+[tasks.sqlc_teardown]
+description = "Drop the Postgres container used for sqlc operations"
+quiet = true
+hide = true
+run = [
+    "echo 'Dropping sqlc Postgres container...'",
+    "docker compose --file docker-compose.yaml down --volumes postgres-sqlc",
 ]

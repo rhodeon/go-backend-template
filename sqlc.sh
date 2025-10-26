@@ -25,7 +25,7 @@ queries_config=$(cat <<-END
         - delete-without-where
         - update-without-where
     database:
-        uri: 'postgresql://\${API_DB_USER}:\${API_DB_PASS}@\${API_DB_HOST}:\${API_DB_PORT}/\${API_DB_NAME}'
+        uri: 'postgresql://\${SQLC_DB_USER}:\${SQLC_DB_PASS}@\${SQLC_DB_HOST}:\${SQLC_DB_PORT}/\${SQLC_DB_NAME}'
     gen:
       go:
         out: "{out_dir}"
