@@ -13,8 +13,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
-// RequestsCounter tracks the total number of requests received.
-func RequestsCounter(app *internal.Application, _ huma.API) func(huma.Context, func(huma.Context)) {
+// RequestCounter tracks the total number of requests received.
+func RequestCounter(app *internal.Application, _ huma.API) func(huma.Context, func(huma.Context)) {
 	meter := otel.GetMeterProvider().Meter(app.Config.Otel.ServiceName)
 
 	requestsCounter, err := meter.Int64Counter(
