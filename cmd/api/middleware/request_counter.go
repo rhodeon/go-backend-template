@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync/atomic"
+	"time"
 
 	"github.com/rhodeon/go-backend-template/cmd/api/internal"
 	"github.com/rhodeon/go-backend-template/internal/log"
@@ -17,6 +18,15 @@ import (
 // RequestCounter tracks the active and total number of requests received.
 func RequestCounter(app *internal.Application, _ huma.API) func(huma.Context, func(huma.Context)) {
 	meter := otel.GetMeterProvider().Meter(app.Config.Otel.ServiceName)
+
+	requestsDurationHistogram, err := meter.Int64Histogram(
+		"http.server.requests_duration",
+		metric.WithDescription("Duration of HTTP requests received"),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		log.Fatal(context.Background(), "Failed to create requests duration histogram", slog.Any(log.AttrError, err))
+	}
 
 	requestsCounter, err := meter.Int64Counter(
 		"http.server.total_requests",
@@ -40,9 +50,20 @@ func RequestCounter(app *internal.Application, _ huma.API) func(huma.Context, fu
 	}
 
 	return func(ctx huma.Context, next func(huma.Context)) {
+		startTime := time.Now()
 		activeRequests.Add(1)
+
 		defer func() {
 			activeRequests.Add(-1)
+
+			requestsDurationHistogram.Record(
+				ctx.Context(),
+				time.Since(startTime).Milliseconds(),
+				metric.WithAttributes(
+					semconv.HTTPRequestMethodKey.String(ctx.Method()),
+					semconv.URLPath(ctx.URL().Path),
+					semconv.ServerAddress(ctx.Host()),
+				))
 		}()
 
 		requestsCounter.Add(ctx.Context(), 1, metric.WithAttributes(
