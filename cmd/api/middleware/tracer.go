@@ -23,13 +23,13 @@ func Tracer(app *internal.Application, _ huma.API) func(huma.Context, func(huma.
 			),
 			trace.WithSpanKind(trace.SpanKindServer),
 		)
-		defer span.End()
+
+		defer func() {
+			span.SetAttributes(semconv.HTTPResponseStatusCode(ctx.Status()))
+			span.End()
+		}()
 
 		ctx = huma.WithContext(ctx, newCtx)
 		next(ctx)
-
-		span.SetAttributes(
-			semconv.HTTPResponseStatusCode(ctx.Status()),
-		)
 	}
 }

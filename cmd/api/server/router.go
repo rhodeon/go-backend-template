@@ -20,8 +20,7 @@ func router(app *internal.Application) http.Handler {
 	api.UseMiddleware(
 		apimiddleware.RequestId(app, api),
 		apimiddleware.Tracer(app, api),
-		apimiddleware.RequestCounter(app, api),
-		apimiddleware.ErrorCounter(app, api),
+		apimiddleware.Meter(app, api),
 		apimiddleware.Logger(app, api),
 		apimiddleware.Recover(app, api),
 		apimiddleware.Timeout(app, api),
