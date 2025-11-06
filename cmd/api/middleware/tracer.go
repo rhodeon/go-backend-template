@@ -11,15 +11,18 @@ import (
 
 // Tracer wraps handlers in an OpenTelemetry span with relevant details to trace the request.
 func Tracer(app *internal.Application, _ huma.API) func(huma.Context, func(huma.Context)) {
-	return func(ctx huma.Context, next func(huma.Context)) {
-		tracer := otel.GetTracerProvider().Tracer(app.Config.Otel.ServiceName)
-		spanName := ctx.Operation().OperationID
+	tracer := otel.GetTracerProvider().Tracer(app.Config.Otel.ServiceName)
 
-		newCtx, span := tracer.Start(ctx.Context(), spanName,
+	return func(ctx huma.Context, next func(huma.Context)) {
+		newCtx, span := tracer.Start(
+			ctx.Context(),
+			ctx.Operation().OperationID,
 			trace.WithAttributes(
 				semconv.HTTPRequestMethodKey.String(ctx.Method()),
 				semconv.URLPath(ctx.URL().Path),
 				semconv.ServerAddress(ctx.Host()),
+				semconv.ServerPort(app.Config.Server.HttpPort),
+				semconv.ClientAddress(ctx.RemoteAddr()),
 			),
 			trace.WithSpanKind(trace.SpanKindServer),
 		)

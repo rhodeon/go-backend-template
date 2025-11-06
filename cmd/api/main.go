@@ -75,12 +75,13 @@ func setupRepositories(ctx context.Context, cfg *internal.Config) (*repositories
 
 	email := mockemail.New()
 	// email, err := smtp.New(ctx, &smtp.Config{
-	// 	Host:        cfg.Smtp.Host,
-	// 	Port:        cfg.Smtp.Port,
-	// 	User:        cfg.Smtp.User,
-	// 	Password:    cfg.Smtp.Password,
-	// 	Sender:      cfg.Smtp.Sender,
-	// 	OtpDuration: cfg.Auth.OtpDuration,
+	// 	Host:            cfg.Smtp.Host,
+	// 	Port:            cfg.Smtp.Port,
+	// 	User:            cfg.Smtp.User,
+	// 	Password:        cfg.Smtp.Password,
+	// 	Sender:          cfg.Smtp.Sender,
+	// 	OtpDuration:     cfg.Auth.OtpDuration,
+	// 	OtelServiceName: cfg.Otel.ServiceName,
 	// })
 	// if err != nil {
 	// 	return nil, errors.Errorf("setting up smtp email repo: %w", err)
