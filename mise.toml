@@ -80,11 +80,11 @@ run = [
 
 
 [tasks.sqlc_setup.env]
-MIGRATION_DB_HOST = "{{env.SQLC_DB_HOST}}"
-MIGRATION_DB_PORT = "{{env.SQLC_DB_PORT}}"
-MIGRATION_DB_USER = "{{env.SQLC_DB_USER}}"
-MIGRATION_DB_PASS = "{{env.SQLC_DB_PASS}}"
-MIGRATION_DB_NAME = "{{env.SQLC_DB_NAME}}"
+MIGRATIONS_DB_HOST = "{{env.SQLC_DB_HOST}}"
+MIGRATIONS_DB_PORT = "{{env.SQLC_DB_PORT}}"
+MIGRATIONS_DB_USER = "{{env.SQLC_DB_USER}}"
+MIGRATIONS_DB_PASS = "{{env.SQLC_DB_PASS}}"
+MIGRATIONS_DB_NAME = "{{env.SQLC_DB_NAME}}"
 
 [tasks.sqlc_setup]
 description = "Set up the Postgres container to be used for Sqlc operations"

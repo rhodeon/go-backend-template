@@ -7,7 +7,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-const configPrefix = "MIGRATION_"
+const configPrefix = "MIGRATIONS_"
 
 type Config struct {
 	Environment string `env:"ENVIRONMENT" envDefault:"Development"`
