@@ -17,6 +17,8 @@ import (
 )
 
 const (
+	imageName = "redis:8.2.0"
+
 	// containerName is the name of the global Redis container to be shared across all test packages.
 	// The UUID suffix is meant to reduce (practically eliminate) the chances of collision with another container.
 	containerName = "gobt-redis-8b44d6d1"
@@ -35,9 +37,9 @@ var testConfig = &Config{
 
 // SetupTestContainer establishes a global Redis instance in a container to be used for testing.
 // This container is truly "global". In other words, a single container is shared/reused across all test packages in the codebase.
-func SetupTestContainer(ctx context.Context, image string, projectRootDir string) error {
+func SetupTestContainer(ctx context.Context, projectRootDir string) error {
 	redisContainer, err := tcredis.Run(ctx,
-		image,
+		imageName,
 		testcontainers.WithReuseByName(containerName),
 		tcredis.WithConfigFile(filepath.Join(projectRootDir, "testdata", "redis.conf")),
 	)

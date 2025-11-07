@@ -46,6 +46,7 @@ description = "Run all tests in codebase"
 quiet = true
 run = [
     "echo 'Running tests...'",
+    "go clean -testcache",
     "go test ./..."
 ]
 

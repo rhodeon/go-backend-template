@@ -26,6 +26,8 @@ import (
 )
 
 const (
+	imageName = "postgres:16"
+
 	// containerName is the name of the global Postgres container to be shared across all test packages.
 	// The UUID suffix is meant to reduce (practically eliminate) the chances of collision with another container.
 	containerName = "gobt-postgres-d0f8d875"
@@ -49,11 +51,11 @@ var testConfig = &database.Config{
 // This is much faster than running the migrations for each test, especially when there's a lot of data involved.
 // This container is truly "global". In other words, a single container is shared/reused across all test packages in the codebase.
 // Having a single shared container helps in cutting down the start-up time of tests and reduces the amount of resources (CPU and memory) used.
-func SetupTestContainer(ctx context.Context, image string, projectRootDir string) error {
+func SetupTestContainer(ctx context.Context, projectRootDir string) error {
 	goose.SetLogger(goose.NopLogger())
 
 	postgresContainer, err := tcpostgres.Run(ctx,
-		image,
+		imageName,
 		testcontainers.WithReuseByName(containerName),
 		tcpostgres.WithDatabase(testConfig.Name),
 		tcpostgres.WithUsername(testConfig.User),

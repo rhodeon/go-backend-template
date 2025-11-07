@@ -22,13 +22,13 @@ type ContainerOpts struct {
 // Reaper reference: https://golang.testcontainers.org/features/garbage_collector/#ryuk
 func SetupContainers(ctx context.Context, opts ContainerOpts) error {
 	if opts.Postgres {
-		if err := postgres.SetupTestContainer(ctx, config.PostgresImage, projectRootDir); err != nil {
+		if err := postgres.SetupTestContainer(ctx, projectRootDir); err != nil {
 			return errors.Errorf("setting up postgres container: %w", err)
 		}
 	}
 
 	if opts.Redis {
-		if err := redis.SetupTestContainer(ctx, config.RedisImage, projectRootDir); err != nil {
+		if err := redis.SetupTestContainer(ctx, projectRootDir); err != nil {
 			return errors.Errorf("setting up redis container: %w", err)
 		}
 	}
