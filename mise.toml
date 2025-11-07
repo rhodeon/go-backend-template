@@ -8,6 +8,9 @@ SQLC_DB_USER = "sqlc_user"
 SQLC_DB_PASS = "sqlc_password"
 SQLC_DB_NAME = "sqlc_db"
 
+[settings]
+color = false
+
 [tools]
 "go" = "1.25.0"
 "golangci-lint" = "v2.4.0"
@@ -57,37 +60,20 @@ run = [
     "golangci-lint fmt",
     "echo 'Formatting SQL migration files...'",
     "sqruff fix ./cmd/migrations/schema",
-    "echo 'Formatting sqlc queries...'",
+    "echo 'Formatting Sqlc queries...'",
     "sqruff fix ./repositories/database/postgres/queries"
 ]
 
-[tasks.vet]
-description = "Lint and vet Go codebase and SQL queries"
-depends = ["sqlc_setup"]
-depends_post = ["sqlc_teardown"]
-quiet = true
-run = [
-    "echo 'Vetting Go code...'",
-    "go mod verify",
-    "golangci-lint run ./...",
-    "echo 'Linting SQL migration queries...'",
-    "sqruff lint ./cmd/migrations/schema",
-    "echo 'Vetting sqlc queries...'",
-    "./sqlc.sh",
-    "sqlc diff",
-    "sqlc vet",
-]
-
 [tasks.sqlc]
-description = "Regenerate sqlc queries"
+description = "Regenerate Sqlc queries"
 depends = ["sqlc_setup"]
 depends_post = ["sqlc_teardown"]
 quiet = true
 run = [
-    "echo 'Vetting sqlc queries...'",
+    "echo 'Vetting Sqlc queries...'",
     "sqlc vet",
     #
-    "echo 'Regenerating sqlc queries...'",
+    "echo 'Regenerating Sqlc queries...'",
     "sqlc generate"
 ]
 
@@ -100,15 +86,15 @@ MIGRATION_DB_PASS = "{{env.SQLC_DB_PASS}}"
 MIGRATION_DB_NAME = "{{env.SQLC_DB_NAME}}"
 
 [tasks.sqlc_setup]
-description = "Set up the Postgres container to be used for sqlc operations"
+description = "Set up the Postgres container to be used for Sqlc operations"
 quiet = true
 hide = true
 run = [
     "echo 'Formatting SQL queries...'",
     "sqruff fix ./repositories/database/postgres/queries",
     #
-    "echo 'Setting up sqlc Postgres container...'",
-    # The Docker container is always dropped at the start in case it wasn't properly dropped after the last sqlc run.
+    "echo 'Setting up Sqlc Postgres container...'",
+    # The Docker container is always dropped at the start in case it wasn't properly dropped after the last Sqlc run.
     "docker compose --file docker-compose.yaml down --volumes postgres-sqlc",
     "docker compose --file docker-compose.yaml up --wait postgres-sqlc",
     #
@@ -120,10 +106,37 @@ run = [
 ]
 
 [tasks.sqlc_teardown]
-description = "Drop the Postgres container used for sqlc operations"
+description = "Drop the Postgres container used for Sqlc operations"
 quiet = true
 hide = true
 run = [
-    "echo 'Dropping sqlc Postgres container...'",
+    "echo 'Dropping Sqlc Postgres container...'",
     "docker compose --file docker-compose.yaml down --volumes postgres-sqlc",
+]
+
+[tasks.vet_go]
+description = "Vet Go code"
+quiet = true
+hide = true # This is hidden because it's meant to be called only by the parent `vet` task.
+run = [
+    "echo 'Vetting Go code...'",
+    "go mod verify",
+    "golangci-lint run ./...",
+]
+
+[tasks.vet_sql]
+description = "Vet SQL code"
+quiet = true
+hide = true # This is hidden because it's meant to be called only by the parent `vet` task.
+depends = ["sqlc_setup"]
+depends_post = ["sqlc_teardown"]
+run = [
+    "echo 'Linting SQL migration queries...'",
+    "sqruff lint ./cmd/migrations/schema",
+    "echo 'Linting Sqlc queries...'",
+    "sqruff lint ./repositories/database/postgres/queries",
+    "echo 'Vetting Sqlc queries...'",
+    "./sqlc.sh",
+    "sqlc diff",
+    "sqlc vet",
 ]

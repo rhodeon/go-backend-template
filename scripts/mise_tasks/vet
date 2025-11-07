@@ -1,0 +1,21 @@
+#!/bin/bash
+#MISE description="Lint and vet codebase"
+#USAGE flag "--go" help="Vet only Go code"
+#USAGE flag "--sql" help="Vet only SQL code"
+#MISE quiet = true
+
+VET_GO="${usage_go:-false}"
+VET_SQL="${usage_sql:-false}"
+
+if [[ "$VET_GO" == "true" ]]; then
+    mise run vet_go
+fi
+
+if [[ "$VET_SQL" == "true" ]]; then
+    mise run vet_sql
+fi
+
+if [[ "$VET_GO" == "false" && "$VET_SQL" == "false" ]]; then
+    mise run vet_go
+    mise run vet_sql
+fi
