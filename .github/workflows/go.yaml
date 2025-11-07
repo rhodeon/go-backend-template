@@ -15,20 +15,13 @@ jobs:
       - name: Checkout codebase
         uses: actions/checkout@v3
 
-      - name: Install Go
-        uses: actions/setup-go@v4
+      - name: Install Mise
+        uses: jdx/mise-action@v3
         with:
-          go-version: 1.24
-
-      - name: Install golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.1
+          version: 2025.11.2
 
       - name: Run vet checks
-        run: |
-          go mod verify |
-          golangci-lint run ./...
+        run: mise run vet --go
 
   test:
     name: Run tests
@@ -42,15 +35,10 @@ jobs:
       - name: Checkout codebase
         uses: actions/checkout@v3
 
-      - name: Setup dotenv
-        run: |
-          touch .env |
-          echo "TEST_POSTGRES_CONTAINER='${TEST_POSTGRES_CONTAINER}'" >> .env
-
-      - name: Setup Go
-        uses: actions/setup-go@v4
+      - name: Install Mise
+        uses: jdx/mise-action@v3
         with:
-          go-version: 1.24
+          version: 2025.11.2
 
       - name: Run tests
-        run: go test ./...
+        run: mise run test
