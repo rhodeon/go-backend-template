@@ -9,6 +9,7 @@ import (
 	apierrors "github.com/rhodeon/go-backend-template/cmd/api/errors"
 	"github.com/rhodeon/go-backend-template/cmd/api/handlers/auth"
 	"github.com/rhodeon/go-backend-template/cmd/api/models/responses"
+	dbusers "github.com/rhodeon/go-backend-template/repositories/database/postgres/sqlcgen/users"
 	"github.com/rhodeon/go-backend-template/utils/testutils"
 
 	"github.com/go-resty/resty/v2"
@@ -50,12 +51,7 @@ func TestRegisterUser_success(t *testing.T) {
 	assert.Equal(t, "johndoe@example.com", responseBody.Data.Email)
 
 	// Confirm that the persisted details match the expected values.
-	type user struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-	}
-
-	var persistedUser user
+	var persistedUser dbusers.User
 
 	// Get the most recently created user.
 	err = app.Db.Pool().QueryRow(context.Background(), `

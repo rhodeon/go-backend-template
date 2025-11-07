@@ -68,8 +68,8 @@ func (h *Handlers) registerRoutes(api huma.API) {
 	huma.Register(
 		api,
 		huma.Operation{
-			OperationID: "users-delete",
-			Method:      http.MethodPost,
+			OperationID: "pets-delete",
+			Method:      http.MethodDelete,
 			Path:        "/{pet_id}",
 			Tags:        []string{"pets"},
 			Summary:     "Delete pet resource",
