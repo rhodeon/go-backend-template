@@ -28,9 +28,6 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    env:
-      TEST_POSTGRES_CONTAINER: "postgres:16" # "postgres:16" needs to be used here, without the "docker.io" prefix, otherwise the image pull breaks due to an invalid reference format.
-
     steps:
       - name: Checkout codebase
         uses: actions/checkout@v3
