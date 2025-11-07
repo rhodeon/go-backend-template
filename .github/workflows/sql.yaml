@@ -20,5 +20,8 @@ jobs:
         with:
           version: 2025.11.2
 
+      - name: Setup dotenv # A .env file is needed for the docker compose commands to run.
+        run: touch .env
+
       - name: Run vet checks
         run: mise run vet --sql
