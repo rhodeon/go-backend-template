@@ -94,9 +94,26 @@ func setupTemplateDb(ctx context.Context, projectRootDir string) error {
 	if err != nil {
 		return errors.Errorf("connecting to initial database: %w", err)
 	}
+	defer closeInitialDb()
+
+	// An advisory lock is acquired to prevent a race condition where a package can make use of the template database
+	// before it's been fully set up. This blocks other connections until the first package is done with the template setup.
+	// A direct connection is acquired because using the pool to hold the lock would result in the automatically-assigned
+	// connection being dropped immediately the query is over, and prematurely release the lock.
+	dbConn, err := initialDb.Pool().Acquire(ctx)
+	if err != nil {
+		return errors.Errorf("acquiring initial database connection:: %w", err)
+	}
+
+	// The lock is automatically released along with the connection.
+	defer dbConn.Release()
+
+	if _, err := dbConn.Exec(ctx, "SELECT pg_advisory_lock(1);"); err != nil {
+		return errors.Errorf("acquiring advisory lock:: %w", err)
+	}
 
 	// If the template database already exists, that means another test package has set it up, so it can be skipped here.
-	if _, err := initialDb.Pool().Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", templateDbName)); err != nil {
+	if _, err := dbConn.Exec(ctx, fmt.Sprintf("CREATE DATABASE %s;", templateDbName)); err != nil {
 		var errPg *pgconn.PgError
 		switch {
 		case errors.As(err, &errPg):
@@ -113,14 +130,13 @@ func setupTemplateDb(ctx context.Context, projectRootDir string) error {
 		}
 	}
 
-	closeInitialDb()
-
 	templateDbConfig := *testConfig
 	templateDbConfig.Name = templateDbName
 	templateDb, closeTemplateDb, err := database.Connect(ctx, &templateDbConfig, false)
 	if err != nil {
 		return errors.Errorf("connecting to test database: %w", err)
 	}
+	defer closeTemplateDb()
 
 	if err := migrateSchema(ctx, templateDb.Pool().Config().ConnString(), projectRootDir); err != nil {
 		return errors.Errorf("migrating schema: %w", err)
@@ -129,8 +145,6 @@ func setupTemplateDb(ctx context.Context, projectRootDir string) error {
 	if err := seedData(ctx, templateDb, projectRootDir); err != nil {
 		return errors.Errorf("seeding data: %w", err)
 	}
-
-	closeTemplateDb()
 
 	return nil
 }
@@ -215,7 +229,7 @@ func seedData(ctx context.Context, db *database.Db, projectRootDir string) error
 				return errors.Errorf("reading seed file for table %q: %w", tableName, err)
 			}
 
-			insertionQuery := fmt.Sprintf("INSERT INTO %s OVERRIDING SYSTEM VALUE SELECT * FROM json_populate_recordset(NULL::%s, $1)", tableName, tableName)
+			insertionQuery := fmt.Sprintf("INSERT INTO %s OVERRIDING SYSTEM VALUE SELECT * FROM json_populate_recordset(NULL::%s, $1);", tableName, tableName)
 			if _, err := dbTx.Exec(ctx, insertionQuery, data); err != nil {
 				return errors.Errorf("inserting data for table %q: %w", tableName, err)
 			}
@@ -243,7 +257,7 @@ func seedData(ctx context.Context, db *database.Db, projectRootDir string) error
 
 			columnName := "id"
 			// With this, the next insertion to the table will start from a valid ID.
-			setValQuery := fmt.Sprintf("SELECT setval('%s', (SELECT MAX(%s) FROM %s))", sequenceName, columnName, tableName)
+			setValQuery := fmt.Sprintf("SELECT setval('%s', (SELECT MAX(%s) FROM %s));", sequenceName, columnName, tableName)
 			if _, err := dbTx.Exec(ctx, setValQuery); err != nil {
 				return errors.Errorf("updating starting ID value for table %q: %w", tableName, err)
 			}
@@ -252,7 +266,7 @@ func seedData(ctx context.Context, db *database.Db, projectRootDir string) error
 
 	// Unfortunately, re-enabling doesn't retroactively enforce the integrity of the already-seeded data,
 	// but it guards against any future changes during the test.
-	if _, err := dbTx.Exec(ctx, "SET session_replication_role = DEFAULT"); err != nil {
+	if _, err := dbTx.Exec(ctx, "SET session_replication_role = DEFAULT;"); err != nil {
 		return errors.Errorf("re-enabling triggers: %w", err)
 	}
 
