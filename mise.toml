@@ -16,6 +16,8 @@ color = false
 "golangci-lint" = "v2.4.0"
 "aqua:sqlc-dev/sqlc" = "1.29.0"
 "aqua:quarylabs/sqruff" = "v0.29.3"
+"go:github.com/g4s8/envdoc" = "v1.8.0"
+"go:github.com/g4s8/envdoc/docenv" = "v1.8.0"
 
 [task_config]
 includes = [
@@ -38,7 +40,8 @@ description = "First-time setup after cloning the repository"
 quiet = true
 run = [
     "echo 'Configuring git hooks directory...'",
-    "git config core.hooksPath .git-hooks"
+    "git config core.hooksPath .git-hooks",
+    "cp -n example.env .env" # A .env file is created from the example env file if one does not already exist.
 ]
 
 [tasks.test]
@@ -62,7 +65,9 @@ run = [
     "echo 'Formatting SQL migration files...'",
     "sqruff fix ./cmd/migrations/schema",
     "echo 'Formatting Sqlc queries...'",
-    "sqruff fix ./repositories/database/postgres/queries"
+    "sqruff fix ./repositories/database/postgres/queries",
+    "echo 'Regenerating config documentation...'",
+    "mise run config_docs"
 ]
 
 [tasks.sqlc]
@@ -116,19 +121,19 @@ run = [
 ]
 
 [tasks.vet_go]
-description = "Vet Go code"
+description = "Vet only Go code"
 quiet = true
-hide = true # This is hidden because it's meant to be called only by the parent `vet` task.
 run = [
     "echo 'Vetting Go code...'",
     "go mod verify",
     "golangci-lint run ./...",
+    "go vet -vettool=$(which docenv) ./cmd/api/internal/config.go",
+    "go vet -vettool=$(which docenv) ./cmd/migrations/internal/config.go"
 ]
 
 [tasks.vet_sql]
-description = "Vet SQL code"
+description = "Vet only SQL code"
 quiet = true
-hide = true # This is hidden because it's meant to be called only by the parent `vet` task.
 depends = ["sqlc_setup"]
 depends_post = ["sqlc_teardown"]
 run = [
@@ -140,4 +145,20 @@ run = [
     "./sqlc.sh",
     "sqlc diff",
     "sqlc vet",
+]
+
+[tasks.config_docs]
+description = "Synchronise the configuration markdown and example files with the current envs in the codebase"
+env = { EXAMPLE_ENV_FILE = "example.env" }
+quiet = true
+hide = false # This is hidden because it's meant to be called by the `tidy` task.
+run = [
+    "go generate ./cmd/api/internal/config.go",
+    "go generate ./cmd/migrations/internal/config.go",
+    "echo '# API' > ${EXAMPLE_ENV_FILE}",
+    "cat ./cmd/api/config.env >> ${EXAMPLE_ENV_FILE}",
+    "echo '# MIGRATIONS' >> ${EXAMPLE_ENV_FILE}",
+    "cat ./cmd/migrations/config.env >> ${EXAMPLE_ENV_FILE}",
+    "rm ./cmd/api/config.env",
+    "rm ./cmd/migrations/config.env"
 ]

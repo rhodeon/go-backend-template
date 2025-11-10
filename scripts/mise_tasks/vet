@@ -1,5 +1,5 @@
 #!/bin/bash
-#MISE description="Lint and vet codebase"
+#MISE description="Lint and vet entire codebase"
 #USAGE flag "--go" help="Vet only Go code"
 #USAGE flag "--sql" help="Vet only SQL code"
 #MISE quiet = true

@@ -78,13 +78,13 @@ func handleShutdown(ctx context.Context, server *http.Server, shutdownErr chan e
 	// Wait until the quit channel is updated with a signal.
 	s := <-quit
 
-	// Timeout context to delay shutdown
+	// Timeout context to delay shutdown.
 	ctx, cancel := context.WithTimeout(ctx, app.Config.Server.ShutdownTimeout)
 	defer cancel()
 
 	slog.InfoContext(ctx, "Shutting down server", slog.String(log.AttrSignal, s.String()))
 
-	// Shut down the server and update the error channel  to resume execution on the main goroutine.
+	// Shut down the server and update the error channel to resume execution on the main goroutine.
 	err := server.Shutdown(ctx)
 	if err != nil {
 		shutdownErr <- err
