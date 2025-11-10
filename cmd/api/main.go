@@ -26,7 +26,7 @@ func main() {
 	}
 }
 
-// run is separated from the main function to ensure cleanups are honoured when an error occurs.
+// run is separated from the main function to ensure clean-ups are honoured when an error occurs.
 // Calling log.Fatal directly in run would trigger os.Exit which skips deferred functions.
 func run(ctx context.Context, cfg *internal.Config) error {
 	log.Setup(cfg.DebugMode)
@@ -50,7 +50,7 @@ func run(ctx context.Context, cfg *internal.Config) error {
 	svcs := setupServices(ctx, cfg, repos)
 	app := internal.NewApplication(cfg, db, svcs)
 
-	// A waitgroup is established to ensure background tasks are completed before shutting down the server.
+	// backgroundWg should be passed to background tasks to ensure they are completed before shutting down the server.
 	backgroundWg := &sync.WaitGroup{}
 
 	// The listen chan isn't used here and is buffered to 1 so the server won't be blocked.

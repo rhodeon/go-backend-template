@@ -16,5 +16,5 @@ docker compose up --detach --remove-orphans $containers
 echo "Starting API..."
 echo "View API logs at http://localhost:18888"
 
-# The API is redirected to a file to allow easier capture by the OTel filelog receiver.
-cd ./cmd/api && go run . >api.log  2>&1
+# The API output is copied into a file to allow easier capture by the OTel filelog receiver.
+cd ./cmd/api && go run . 2>&1 | tee api.log
