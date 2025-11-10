@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	_ "github.com/joho/godotenv/autoload"
 )
 
 const configPrefix = "MIGRATIONS_"
