@@ -3,9 +3,6 @@ services:
     image: postgres:16
     restart: unless-stopped
 
-    env_file:
-      - .env
-
     environment:
       POSTGRES_USER: ${MIGRATIONS_DB_USER}
       POSTGRES_PASSWORD: ${MIGRATIONS_DB_PASS}
