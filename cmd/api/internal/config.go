@@ -8,8 +8,8 @@ import (
 
 const configPrefix = "API_"
 
-//go:generate envdoc -output "../config.md" -types "Config" -env-prefix "API_" -format "markdown"
-//go:generate envdoc -output "../config.env" -types "Config" -env-prefix "API_" -format "dotenv"
+//go:generate envdoc -output "../config.md" -types "Config" -env-prefix "API_" -template "../../../templates/configdoc.md.go.tmpl" -title "API"
+//go:generate envdoc -output "../config.env" -types "Config" -env-prefix "API_" -template "../../../templates/configdoc.dotenv.go.tmpl" -title "API"
 type Config struct {
 	// Environment specifies the current running environment of the API.
 	Environment string `env:"ENVIRONMENT" envDefault:"development"`
@@ -17,9 +17,9 @@ type Config struct {
 	// DebugMode enables/disables detailed debugging output.
 	DebugMode bool `env:"DEBUG_MODE" envDefault:"false"`
 
+	Server   ServerConfig
 	Database DatabaseConfig
 	Cache    CacheConfig
-	Server   ServerConfig
 	Auth     AuthConfig
 	Smtp     SmtpConfig
 	Otel     OtelConfig
@@ -34,7 +34,7 @@ func ParseConfig() *Config {
 
 type ServerConfig struct {
 	// HttpPort defines the port number on which the HTTP server will listen for incoming connections.
-	HttpPort int `env:"SERVER_HTTP_PORT,required"`
+	HttpPort int `env:"SERVER_HTTP_PORT,notEmpty"`
 
 	// BaseUrl specifies the base URL used for constructing server-related endpoints.
 	BaseUrl string `env:"SERVER_BASE_URL"`
@@ -66,13 +66,13 @@ type DatabaseConfig struct {
 	Port string `env:"DB_PORT" envDefault:"5432"`
 
 	// User for the database authentication.
-	User string `env:"DB_USER,required"`
+	User string `env:"DB_USER,notEmpty"`
 
 	// Pass (password) for the database authentication.
-	Pass string `env:"DB_PASS,required"`
+	Pass string `env:"DB_PASS,notEmpty"`
 
 	// Name of the database to connect to.
-	Name string `env:"DB_NAME,required"`
+	Name string `env:"DB_NAME,notEmpty"`
 
 	// SslMode of the database connection.
 	SslMode string `env:"DB_SSL_MODE" envDefault:"disable"`

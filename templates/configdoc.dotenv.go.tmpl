@@ -1,0 +1,22 @@
+# {{ .Title }}
+{{- range .Sections }}
+{{- range $item := .Items }}
+{{- $attributes := "" -}}
+{{- if $item.Required }}
+{{- $attributes = printf "%sREQUIRED, " $attributes }}
+{{- end }}
+{{- if $item.EnvDefault -}}
+{{- $attributes = printf "%sdefault = %q, " $attributes $item.EnvDefault -}}
+{{- end -}}
+{{- if eq $item.EnvSeparator "," }}
+{{- $attributes = printf "%sSeparated by `%s`, " $attributes ":" }}
+{{- end }}
+{{- if $attributes -}}
+{{- $attributes = trimSuffix $attributes ", " }}
+{{- $attributes = printf "(%s)" $attributes }}
+{{ printf "%s=%q\t# %s" $item.EnvName $item.EnvDefault $attributes }}
+{{- else }}
+{{ printf "%s=%q" $item.EnvName $item.EnvDefault }}
+{{- end }}
+{{- end }}
+{{- end }}

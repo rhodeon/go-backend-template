@@ -16,8 +16,8 @@ color = false
 "golangci-lint" = "v2.4.0"
 "aqua:sqlc-dev/sqlc" = "1.29.0"
 "aqua:quarylabs/sqruff" = "v0.29.3"
-"go:github.com/g4s8/envdoc" = "v1.8.0"
-"go:github.com/g4s8/envdoc/docenv" = "v1.8.0"
+"go:github.com/rhodeon/envdoc" = "custom-templates"
+"go:github.com/rhodeon/envdoc/docenv" = "custom-templates"
 
 [task_config]
 includes = [
@@ -151,14 +151,44 @@ run = [
 description = "Synchronise the configuration markdown and example files with the current envs in the codebase"
 env = { EXAMPLE_ENV_FILE = "example.env" }
 quiet = true
-hide = false # This is hidden because it's meant to be called by the `tidy` task.
 run = [
     "go generate ./cmd/api/internal/config.go",
     "go generate ./cmd/migrations/internal/config.go",
-    "echo '# API' > ${EXAMPLE_ENV_FILE}",
-    "cat ./cmd/api/config.env >> ${EXAMPLE_ENV_FILE}",
-    "echo '# MIGRATIONS' >> ${EXAMPLE_ENV_FILE}",
+    "cat ./cmd/api/config.env > ${EXAMPLE_ENV_FILE}",
+    "echo '' >> ${EXAMPLE_ENV_FILE}",
     "cat ./cmd/migrations/config.env >> ${EXAMPLE_ENV_FILE}",
     "rm ./cmd/api/config.env",
-    "rm ./cmd/migrations/config.env"
+    "rm ./cmd/migrations/config.env",
+    # The script below embeds the config documentation for each service into the top-level README.md.
+    '''
+    embed_content() {
+        local id="$1"
+        local content_file="$2"
+        local target_file="README.md"
+
+        new_content="$(cat "$content_file")"
+
+
+        awk -v content="$new_content" -v id="$id" '
+        $0 ~ "\\[<!-- envdoc-start id:" id " -->\\]: #" {
+            print
+            printf "\n##%s\n\n", content # The content is prepended with ## to reduce the heading size.
+            in_envdoc_scope=1 # in_envdoc_scope signifies if the current line is within envdoc markers.
+            next
+        }
+
+        $0 ~ "\\[<!-- envdoc-end id:" id " -->\\]: #" {
+            in_envdoc_scope=0
+            print
+            next
+        }
+
+        !in_envdoc_scope { print } # Lines not within envdoc scopes are left untouched.
+
+        ' "$target_file" > tmp && mv tmp "$target_file"
+    }
+
+    embed_content "api" "./cmd/api/config.md"
+    embed_content "migrations" "./cmd/migrations/config.md"
+    '''
 ]

@@ -1,16 +1,15 @@
-# Environment Variables
+# Migrations
 
-## Config
-
- - `MIGRATIONS_ENVIRONMENT` (default: `Development`) - Environment specifies the current running environment of the database migrations.
- - `MIGRATIONS_DEBUG_MODE` (default: `false`) - DebugMode enables/disables detailed debugging output.
- - `MIGRATIONS_DB_ADDR` (default: `localhost`) - Host address of the database to connect to.
- - `MIGRATIONS_DB_PORT` (default: `5432`) - Port of the database to connect to.
- - `MIGRATIONS_DB_USER` (**required**) - User for the database authentication.
- - `MIGRATIONS_DB_PASS` (**required**) - Pass (password) for the database authentication.
- - `MIGRATIONS_DB_NAME` (**required**) - Name of the database to connect to.
- - `MIGRATIONS_DB_SSL_MODE` (default: `disable`) - SslMode of the database connection.
- - `MIGRATIONS_DB_MAX_CONNECTIONS` (default: `25`) - MaxConns is the maximum connections that can be created by the database connection pool.
- - `MIGRATIONS_DB_MAX_CONNECTION_LIFETIME` (default: `2h`) - MaxConnLifetime is the duration since creation after which a connection will be automatically closed.
- - `MIGRATIONS_DB_MAX_CONNECTION_IDLE_TIME` (default: `5m`) - MaxConnIdleTime is the duration after which an idle connection will be automatically closed.
-
+| Name | Description | Default | Attributes |
+|------|-------------|---------|------------|
+| `MIGRATIONS_ENVIRONMENT` | Environment specifies the current running environment of the database migrations. | `development` |  |
+| `MIGRATIONS_DEBUG_MODE` | DebugMode enables/disables detailed debugging output. | `false` |  |
+| `MIGRATIONS_DB_ADDR` | Host address of the database to connect to. | `localhost` |  |
+| `MIGRATIONS_DB_PORT` | Port of the database to connect to. | `5432` |  |
+| `MIGRATIONS_DB_USER` | User for the database authentication. |  | `REQUIRED` |
+| `MIGRATIONS_DB_PASS` | Pass (password) for the database authentication. |  | `REQUIRED` |
+| `MIGRATIONS_DB_NAME` | Name of the database to connect to. |  | `REQUIRED` |
+| `MIGRATIONS_DB_SSL_MODE` | SslMode of the database connection. | `disable` |  |
+| `MIGRATIONS_DB_MAX_CONNECTIONS` | MaxConns is the maximum connections that can be created by the database connection pool. | `25` |  |
+| `MIGRATIONS_DB_MAX_CONNECTION_LIFETIME` | MaxConnLifetime is the duration since creation after which a connection will be automatically closed. | `2h` |  |
+| `MIGRATIONS_DB_MAX_CONNECTION_IDLE_TIME` | MaxConnIdleTime is the duration after which an idle connection will be automatically closed. | `5m` |  |
