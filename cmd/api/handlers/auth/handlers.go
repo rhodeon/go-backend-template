@@ -54,7 +54,7 @@ func (h *Handlers) registerRoutes(api huma.API) {
 		huma.Operation{
 			OperationID: "auth-send-verification-email",
 			Method:      http.MethodPost,
-			Path:        "/verification-email",
+			Path:        "/send-verification-email",
 			Tags:        []string{"auth"},
 			Summary:     "Send verification email",
 			Description: "Sends verification email to unverified users.",
