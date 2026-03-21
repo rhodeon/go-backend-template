@@ -49,9 +49,18 @@ func NewCustomRegistry() *CustomRegistry {
 func (r *CustomRegistry) Schema(t reflect.Type, allowRef bool, hint string) *huma.Schema {
 	v := reflect.New(t).Interface()
 
+	// Slice, array, and pointer types are unwrapped to check if the underlying element type is handler-local.
+	// Slices of handler-local types have an empty PkgPath(), so the handlers check below would miss them.
+	// If not unwrapped, the inner mapRegistry processes the element type directly, bypassing the CustomRegistry.
+	underlying := t
+	for underlying.Kind() == reflect.Slice || underlying.Kind() == reflect.Array || underlying.Kind() == reflect.Ptr {
+		underlying = underlying.Elem()
+	}
+
 	if _, ok := v.(common.InlinedSchema); ok ||
 		// Types defined in the `handlers` package are tied to a specific handler and are inlined into its endpoint's definition.
-		strings.Contains(t.PkgPath(), "/handlers") {
+		strings.Contains(t.PkgPath(), "/handlers") ||
+		strings.Contains(underlying.PkgPath(), "/handlers") {
 		return huma.SchemaFromType(r, t)
 	}
 
