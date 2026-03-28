@@ -4,7 +4,7 @@
 |------|-------------|---------|------------|
 | `MIGRATIONS_ENVIRONMENT` | Environment specifies the current running environment of the database migrations. | `development` |  |
 | `MIGRATIONS_DEBUG_MODE` | DebugMode enables/disables detailed debugging output. | `false` |  |
-| `MIGRATIONS_DB_ADDR` | Host address of the database to connect to. | `localhost` |  |
+| `MIGRATIONS_DB_HOST` | Host address of the database to connect to. | `localhost` |  |
 | `MIGRATIONS_DB_PORT` | Port of the database to connect to. | `5432` |  |
 | `MIGRATIONS_DB_USER` | User for the database authentication. |  | `REQUIRED` |
 | `MIGRATIONS_DB_PASS` | Pass (password) for the database authentication. |  | `REQUIRED` |

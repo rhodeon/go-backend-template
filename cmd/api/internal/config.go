@@ -60,7 +60,7 @@ type ServerConfig struct {
 
 type DatabaseConfig struct {
 	// Host address of the database to connect to.
-	Host string `env:"DB_ADDR" envDefault:"localhost"`
+	Host string `env:"DB_HOST" envDefault:"localhost"`
 
 	// Port of the database to connect to.
 	Port string `env:"DB_PORT" envDefault:"5432"`

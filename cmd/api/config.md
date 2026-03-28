@@ -11,7 +11,7 @@
 | `API_SERVER_WRITE_TIMEOUT` | WriteTimeout defines the maximum duration for writing a response before timing out. | `15s` |  |
 | `API_SERVER_REQUEST_TIMEOUT` | RequestTimeout specifies the maximum duration for handlers to run.<br>It should be lower than WriteTimeout as no response will be returned if a handler's runtime exceeds the write timeout. | `10s` |  |
 | `API_SERVER_SHUTDOWN_TIMEOUT` | ShutdownTimeout specifies the duration the server will wait to wrap up active connections and background operations for a graceful shutdown. | `30s` |  |
-| `API_DB_ADDR` | Host address of the database to connect to. | `localhost` |  |
+| `API_DB_HOST` | Host address of the database to connect to. | `localhost` |  |
 | `API_DB_PORT` | Port of the database to connect to. | `5432` |  |
 | `API_DB_USER` | User for the database authentication. |  | `REQUIRED` |
 | `API_DB_PASS` | Pass (password) for the database authentication. |  | `REQUIRED` |

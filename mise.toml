@@ -16,8 +16,8 @@ color = false
 "golangci-lint" = "v2.4.0"
 "aqua:sqlc-dev/sqlc" = "1.29.0"
 "aqua:quarylabs/sqruff" = "v0.29.3"
-"go:github.com/rhodeon/envdoc" = "custom-templates"
-"go:github.com/rhodeon/envdoc/docenv" = "custom-templates"
+"go:github.com/rhodeon/envdoc" = "v1.1.0"
+"go:github.com/rhodeon/envdoc/docenv" = "v1.1.0"
 
 [task_config]
 includes = [
