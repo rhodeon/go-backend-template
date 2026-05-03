@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Inspired by https://github.com/sqlc-dev/sqlc/issues/2469,
 # this script generates an sqlc config file which generates separate packages for each query file.
